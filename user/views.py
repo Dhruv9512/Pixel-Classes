@@ -56,17 +56,28 @@ def send_mail_for_register(user):
 
 
 # Resend OTP View
-@csrf_exempt
-def resend_otp(request):
-    """Resend OTP to the user's email."""
-    email = request.data.get('email')
-    try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
-    send_mail_for_register(user)
+class ResendOTPView(APIView):
+    def post(self, request):
+        """Resend OTP to the user's email."""
+        email = request.data.get('email')
+        
+        # Check if email was provided
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Retrieve the user based on the provided email
+            user = User.objects.get(email=email)
+            
+            # Send OTP again
+            send_mail_for_register(user)
+            
+            return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
+        
+        except User.DoesNotExist:
+            # If no user is found with the provided email, return an error message
+            return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
 
-    
 # Send Login Verification email
 def send_mail_for_login(user):
     """Send login verification email to the user."""
