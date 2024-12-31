@@ -39,7 +39,6 @@ def send_mail_for_register(user):
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
         logger.info(f"Sent OTP email to {user.email}")
         context1 = {
-            'email': user.username,
             'otp': otp,
         }
         return Response(context1, status=status.HTTP_200_OK)

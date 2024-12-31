@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -8,40 +9,68 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponseRedirect
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.core.management.utils import get_random_secret_key
+import random
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
-from .utils import send_mail_for_register, send_mail_for_login
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# OTP Generation function
+def generate_otp():
+    """Generate a random 6-digit OTP."""
+    otp = str(random.randint(100000, 999999))
+    logger.debug(f"Generated OTP: {otp}")
+    return otp
 
+# Send Registration OTP email
+def send_mail_for_register(user):
+    """Send OTP to user for registration."""
+    otp = generate_otp()
 
-# Resend OTP View
-class ResendOTPView(APIView):
-    def post(self, request):
-        """Resend OTP to the user's email."""
-        username = request.data.get('username')
-        
-        # Check if email was provided
-        if not username:
-            return Response({"error": "Username not found in input."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            # Retrieve the user based on the provided email
-            user = User.objects.get(username=username)
-            
-            # Send OTP again
-            send_mail_for_register(user)
-            
-            return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
-        
-        except User.DoesNotExist:
-            # If no user is found with the provided email, return an error message
-            return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
+    # Store OTP in cache (expires in 5 minutes)
+    cache.set(f"otp_{user.pk}", otp, timeout=300)
+    logger.debug(f"OTP for user {user.username} stored in cache")
 
+    subject = 'Email Verification'
+    context = {
+        'username': user.username,
+        'otp': otp,
+        'current_year': now().year,
+    }
 
+    try:
+        message = render_to_string('Signup/Email_Register_OTP.html', context)
+        send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
+        logger.info(f"Sent OTP email to {user.email}")
+        context1 = {
+            'username': user.email,
+            'otp': otp,
+        }
+        return Response(context1, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error sending email to {user.email}: {str(e)}")
+        raise
+
+# Send Login Verification email
+def send_mail_for_login(user):
+    """Send login verification email to the user."""
+    subject = 'Login Verification'
+    message = render_to_string('Login/email_verification_For_Login.html', {
+        'user': user,
+    })
+    try:
+        send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
+        logger.info(f"Sent login verification email to {user.email}")
+    except Exception as e:
+        logger.error(f"Error sending login verification email: {str(e)}")
 
 # OTP Verification View
 class VerifyOTPView(APIView):
@@ -53,12 +82,12 @@ class VerifyOTPView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        username = request.data.get('username')
+        email = request.data.get('email')
         
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({"error": "No user found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
 
         stored_otp = cache.get(f"otp_{user.pk}")
 
@@ -85,17 +114,7 @@ class LoginView(APIView):
                 username = serializer.validated_data['username']
                 password = serializer.validated_data['password']
 
-                try:
-                    # Check if the user exists
-                    user = User.objects.get(username=username)
-                except User.DoesNotExist:
-                    return Response({'error': 'User does not exist'}, status=400)
-
-                # Authenticate the user
                 user = authenticate(username=username, password=password)
-                if user is None:
-                    return Response({'error': 'Password is not valid'}, status=400)
-
                 if user:
                     # Send email verification for login
                     send_mail_for_login(user)
@@ -131,16 +150,7 @@ class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
         """Register a new user and send OTP verification email."""
-
         email = request.data.get('email')
-        username = request.data.get('username')
-
-        # Check if the username already exists
-        if User.objects.filter(username=username).exists():
-            logger.warning(f"Registration failed: Username {username} already exists.")
-            return Response({"username": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
-     
-        # Check if the email already exists
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
             return Response({"email": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
