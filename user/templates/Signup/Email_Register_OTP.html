@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            color: #444;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: #ffffff;
+            border-radius: 10px 10px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+        .content p {
+            margin: 10px 0;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .otp-container {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .otp {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #f2f2f2;
+            font-size: 20px;
+            color: #4CAF50;
+            border-radius: 8px;
+            border: 1px solid #4CAF50;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 20px;
+        }
+        .contact-info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+        .contact-info a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Pixel Classes</h1>
+        </div>
+        <div class="content">
+            <p>Hi <strong>{{ username }}</strong>,</p>
+            <p>Thank you for choosing <strong>Pixel Classes</strong>! Use the OTP below to verify your account and complete your registration.</p>
+            <div class="otp-container">
+                <span class="otp">{{ otp }}</span>
+            </div>
+            <p>If you didn’t request this email, please ignore it or contact our support team immediately.</p>
+            <div class="contact-info">
+                <p>Email: <a href="mailto:pixelclasses3@gmail.com">pixelclasses3@gmail.com</a></p>
+                <p>Phone: <a href="tel:+9195124567895">+91 95124567895</a></p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; {{ current_year }} Pixel Classes. All rights reserved.</p>
+            <p><a href="https://pixelclasses.com/privacy-policy">Privacy Policy</a> | <a href="https://pixelclasses.com/terms">Terms of Service</a></p>
+        </div>
+    </div>
+</body>
+</html>
