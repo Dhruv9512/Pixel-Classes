@@ -8,9 +8,11 @@ from rest_framework.response import Response
 from django.conf.global_settings import EMAIL_HOST_USER
 from rest_framework import status
 from django.core.mail import send_mail
+from django.views.decorators.csrf import csrf_exempt
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
 # OTP Generation function
 def generate_otp():
     """Generate a random 6-digit OTP."""
@@ -19,6 +21,7 @@ def generate_otp():
     return otp
 
 # Send Registration OTP email
+@csrf_exempt
 def send_mail_for_register(user):
     """Send OTP to user for registration."""
     otp = generate_otp()
@@ -44,6 +47,7 @@ def send_mail_for_register(user):
 
 
 # Send Login Verification email
+@csrf_exempt
 def send_mail_for_login(user):
     """Send login verification email to the user."""
     subject = 'Login Verification'
