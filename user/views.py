@@ -24,9 +24,10 @@ import logging
 logger = logging.getLogger(__name__)
 # OTP Verification View
 class VerifyOTPView(APIView):
-    @csrf_exempt
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
+        
+        # Validate the incoming OTP data
         if not serializer.is_valid():
             logger.error(f"OTP verification failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -34,22 +35,32 @@ class VerifyOTPView(APIView):
         otp = serializer.validated_data['otp']
         username = request.data.get('username')
         
+        # Ensure username is provided in the request
+        if not username:
+            return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch user from the database
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Fetch stored OTP from cache
         stored_otp = cache.get(f"otp_{user.pk}")
-
+        
         if stored_otp is None:
+            logger.warning(f"OTP expired or not generated for user: {user.username}")
             return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if the OTP matches the stored one
         if otp == stored_otp:
             user.is_active = True
             user.save()
-            cache.delete(f"otp_{user.pk}")
+            cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
+            logger.info(f"Account activated successfully for user: {user.username}")
             return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
         else:
+            logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
 # Login View
