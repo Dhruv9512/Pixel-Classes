@@ -131,7 +131,6 @@ CORS_ALLOWED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
     'https://pixelclass.netlify.app',
-    'https://pixel-classes.onrender.com',
 ]
 
 # Secure CSRF cookie settings
