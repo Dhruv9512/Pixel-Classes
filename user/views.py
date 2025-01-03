@@ -140,36 +140,10 @@ class RegisterView(APIView):
             user = serializer.save()
             send_mail_for_register(user)
             logger.info(f"User {user.username} registered successfully")
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            response = Response(serializer.data, status=status.HTTP_201_CREATED)
+            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
+            return response
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-class ResendOTPView(APIView):
-    """View to resend OTP to the user."""
-    
-    def post(self, request, *args, **kwargs):
-        user = request.user
-        otp = generate_otp()
-        
-        # Store OTP in cache (expires in 5 minutes)
-        cache.set(f"otp_{user.pk}", otp, timeout=300)
-        logger.debug(f"Resent OTP for user {user.username} stored in cache")
-        
-        subject = 'Resend OTP'
-        context = {
-            'username': user.username,
-            'otp': otp,
-            'current_year': now().year,
-        }
-        
-        try:
-            message = render_to_string('Signup/Email_Register_OTP.html', context)
-            send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
-            logger.info(f"Resent OTP email to {user.email}")
-            response = Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
-            return response
-        except Exception as e:
-            logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
-            return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
