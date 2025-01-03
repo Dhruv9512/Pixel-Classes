@@ -166,7 +166,9 @@ class ResendOTPView(APIView):
             message = render_to_string('Signup/Email_Register_OTP.html', context)
             send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
             logger.info(f"Resent OTP email to {user.email}")
-            return Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
+            response = Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
