@@ -15,63 +15,13 @@ from django.http import HttpResponseRedirect
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.core.management.utils import get_random_secret_key
-import random
+from .utils import send_mail_for_register, send_mail_for_login
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
 
 # Set up logging
 logger = logging.getLogger(__name__)
-
-# OTP Generation function
-def generate_otp():
-    """Generate a random 6-digit OTP."""
-    otp = str(random.randint(100000, 999999))
-    logger.debug(f"Generated OTP: {otp}")
-    return otp
-
-# Send Registration OTP email
-def send_mail_for_register(user):
-    """Send OTP to user for registration."""
-    otp = generate_otp()
-
-    # Store OTP in cache (expires in 5 minutes)
-    cache.set(f"otp_{user.pk}", otp, timeout=300)
-    logger.debug(f"OTP for user {user.username} stored in cache")
-
-    subject = 'Email Verification'
-    context = {
-        'username': user.username,
-        'otp': otp,
-        'current_year': now().year,
-    }
-
-    try:
-        message = render_to_string('Signup/Email_Register_OTP.html', context)
-        send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
-        logger.info(f"Sent OTP email to {user.email}")
-        context1 = {
-            'username': user.email,
-            'otp': otp,
-        }
-        return Response(context1, status=status.HTTP_200_OK)
-    except Exception as e:
-        logger.error(f"Error sending email to {user.email}: {str(e)}")
-        raise
-
-# Send Login Verification email
-def send_mail_for_login(user):
-    """Send login verification email to the user."""
-    subject = 'Login Verification'
-    message = render_to_string('Login/email_verification_For_Login.html', {
-        'user': user,
-    })
-    try:
-        send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
-        logger.info(f"Sent login verification email to {user.email}")
-    except Exception as e:
-        logger.error(f"Error sending login verification email: {str(e)}")
-
 # OTP Verification View
 class VerifyOTPView(APIView):
     @csrf_exempt
@@ -82,10 +32,10 @@ class VerifyOTPView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        email = request.data.get('email')
+        username = request.data.get('username')
         
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(username=username)
         except User.DoesNotExist:
             return Response({"error": "No user found with this email address."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -113,8 +63,18 @@ class LoginView(APIView):
             if serializer.is_valid():
                 username = serializer.validated_data['username']
                 password = serializer.validated_data['password']
+                
+                # User name verification
+                try:
+                    user = User.objects.get(username=username)
+                except User.DoesNotExist:
+                    return Response({"username": "Username does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
-                user = authenticate(username=username, password=password)
+                try:
+                    user = authenticate(username=username, password=password)
+                except Exception as e:
+                    return Response({"Password incorrect": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+               
                 if user:
                     # Send email verification for login
                     send_mail_for_login(user)
@@ -151,10 +111,19 @@ class RegisterView(APIView):
     def post(self, request):
         """Register a new user and send OTP verification email."""
         email = request.data.get('email')
+        username = request.data.get('username')
+
+        # Check if email already exists
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
             return Response({"email": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
+
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            logger.warning(f"Registration failed: Username {username} already exists.")
+            return Response({"username": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+        
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
