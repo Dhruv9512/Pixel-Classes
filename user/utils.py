@@ -57,4 +57,4 @@ def send_mail_for_login(user):
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
         logger.info(f"Sent login verification email to {user.email}")
     except Exception as e:
-        logger.error(f"Error sending login verification email: {str(e)}")
+        logger.error(f"Error sending login verification email: {str(e)}") 
