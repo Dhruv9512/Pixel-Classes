@@ -22,6 +22,7 @@ from django.http import HttpResponseRedirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
 # OTP Verification View
 class VerifyOTPView(APIView):
     def post(self, request):
@@ -63,6 +64,7 @@ class VerifyOTPView(APIView):
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Login View
 class LoginView(APIView):
     @csrf_exempt
@@ -76,17 +78,8 @@ class LoginView(APIView):
                 password = serializer.validated_data['password']
                 
                 # User name verification
-                try:
-                    user = User.objects.get(username=username)
-                except User.DoesNotExist:
-                    return Response({"username": "Username does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-                try:
-                    user = authenticate(username=username, password=password)
-                except Exception as e:
-                    return Response({"Password incorrect": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-               
-                if user:
+                user = authenticate(username=username, password=password)
+                if user is not None:
                     # Send email verification for login
                     send_mail_for_login(user)
 
@@ -105,9 +98,8 @@ class LoginView(APIView):
                     response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
                     logger.info(f"User {user.username} logged in successfully")
                     return response
-
-                logger.error(f"Invalid credentials for user {username}")
-                return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+                else:
+                    return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
             logger.error(f"Serializer errors: {serializer.errors}")
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -115,6 +107,7 @@ class LoginView(APIView):
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # Register View
 class RegisterView(APIView):
@@ -173,3 +166,4 @@ class ResendOTPView(APIView):
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
