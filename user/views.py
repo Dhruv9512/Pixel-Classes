@@ -18,12 +18,12 @@ from .utils import send_mail_for_register, send_mail_for_login, generate_otp
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
+from django.http import HttpResponseRedirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
 # OTP Verification View
 class VerifyOTPView(APIView):
-    @csrf_exempt
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
         
@@ -58,6 +58,7 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
             logger.info(f"Account activated successfully for user: {user.username}")
+            return HttpResponseRedirect('https://pixelclass.netlify.app/verification')
         else:
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
@@ -167,7 +168,6 @@ class ResendOTPView(APIView):
             send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
             logger.info(f"Resent OTP email to {user.email}")
             response = Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
             response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
