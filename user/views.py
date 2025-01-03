@@ -59,7 +59,6 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
             logger.info(f"Account activated successfully for user: {user.username}")
-            return HttpResponseRedirect('https://pixelclass.netlify.app/verification')
         else:
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
