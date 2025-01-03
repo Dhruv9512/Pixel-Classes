@@ -153,7 +153,7 @@ class RegisterView(APIView):
 class ResendOTPView(APIView):
     """View to resend OTP to the user."""
     
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         username = request.data.get('username')
         
         # Ensure username is provided in the request
