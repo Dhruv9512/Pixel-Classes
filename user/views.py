@@ -23,6 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 # OTP Verification View
 class VerifyOTPView(APIView):
+    @csrf_exempt
     def post(self, request):
         serializer = OTPSerializer(data=request.data)
         
