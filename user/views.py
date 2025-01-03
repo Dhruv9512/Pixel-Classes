@@ -11,7 +11,6 @@ from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
 from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponseRedirect
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.core.management.utils import get_random_secret_key
@@ -58,7 +57,6 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
             logger.info(f"Account activated successfully for user: {user.username}")
-            return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
         else:
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
