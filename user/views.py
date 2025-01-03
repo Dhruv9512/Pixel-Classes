@@ -166,4 +166,3 @@ class ResendOTPView(APIView):
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
