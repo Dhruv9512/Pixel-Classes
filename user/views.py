@@ -59,7 +59,6 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
             logger.info(f"Account activated successfully for user: {user.username}")
-            return HttpResponseRedirect('https://pixelclass.netlify.app/verification')
         else:
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
@@ -131,12 +130,11 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            send_mail_for_register(user)
             logger.info(f"User {user.username} registered successfully")
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
-            response.set_cookie('status', 'false', httponly=True, max_age=86400)  # 1 day in seconds
-            response.set_cookie('username', username, httponly=True, max_age=86400)  # 1 day in seconds
-            logger.debug(f"Cookies set: status=false, username={username}")
+            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
+            send_mail_for_register(user)
             return response
 
         logger.error(f"Registration failed: {serializer.errors}")
