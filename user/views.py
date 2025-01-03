@@ -147,3 +147,23 @@ class RegisterView(APIView):
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Resend OTP View
+class ResendOTPView(APIView):
+    @csrf_exempt
+    def post(self, request):
+        """Resend OTP to the user's email."""
+        username = request.data.get('username')
+        if not username:
+            return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Send OTP email
+        send_mail_for_register(user)
+        logger.info(f"Resent OTP email to {user.email}")
+        return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
