@@ -1,4 +1,3 @@
-
 from django.utils.timezone import now
 import random
 import logging
@@ -48,6 +47,7 @@ def send_mail_for_register(user):
 
 # Send Login Verification email
 @csrf_exempt
+@cors_allow_all
 def send_mail_for_login(user):
     """Send login verification email to the user."""
     subject = 'Login Verification'
