@@ -10,10 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")  # Use a secure key in production
 DEBUG = False
 
-
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Or use file-based/session-based backend
-
-
 # ALLOWED_HOSTS: Allow the frontend and backend URLs
 ALLOWED_HOSTS = [
     'pixel-classes.onrender.com', 
