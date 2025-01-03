@@ -151,19 +151,25 @@ class RegisterView(APIView):
 
 # Resend OTP View
 class ResendOTPView(APIView):
-    @csrf_exempt
-    def post(self, request):
-        """Resend OTP to the user's email."""
+    """View to resend OTP to the user."""
+    
+    def post(self, request, *args, **kwargs):
         username = request.data.get('username')
+        
+        # Ensure username is provided in the request
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Fetch user from the database
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Send OTP email
-        send_mail_for_register(user)
-        logger.info(f"Resent OTP email to {user.email}")
-        return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
+        try:
+            send_mail_for_register(user)
+            logger.info(f"Resent OTP email to {user.email}")
+            return Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
+            return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
