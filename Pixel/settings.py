@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security and Debugging
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")  # Use a secure key in production
-DEBUG = config("DEBUG", default=True, cast=bool)  # Set DEBUG to False in production
+DEBUG = False
 
 
 
