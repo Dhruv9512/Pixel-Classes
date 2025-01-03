@@ -135,8 +135,8 @@ class RegisterView(APIView):
             logger.info(f"User {user.username} registered successfully")
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
             response.set_cookie('status', 'false', httponly=True, max_age=86400)  # 1 day in seconds
-            response.set_cookie('username', user.username, httponly=True, max_age=86400)  # 1 day in seconds
-            logger.debug(f"Cookies set: status=false, username={user.username}")
+            response.set_cookie('username', username, httponly=True, max_age=86400)  # 1 day in seconds
+            logger.debug(f"Cookies set: status=false, username={username}")
             return response
 
         logger.error(f"Registration failed: {serializer.errors}")
