@@ -112,6 +112,8 @@ class LoginView(APIView):
 
 
 # Register View
+from datetime import timedelta
+
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -123,7 +125,6 @@ class RegisterView(APIView):
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
             return Response({"email": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
-
 
         # Check if username already exists
         if User.objects.filter(username=username).exists():
