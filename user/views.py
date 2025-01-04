@@ -18,6 +18,7 @@ from .utils import send_mail_for_register, send_mail_for_login, generate_otp
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
+from datetime import timedelta
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -78,40 +79,43 @@ class LoginView(APIView):
                 username = serializer.validated_data['username']
                 password = serializer.validated_data['password']
                 
-                # User name verification
-                user = authenticate(username=username, password=password)
-                if user is not None:
-                    # Send email verification for login
-                    send_mail_for_login(user)
+                # First, check if the user exists by verifying the username
+                try:
+                    user = User.objects.get(username=username)
+                except User.DoesNotExist:
+                    return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-                    refresh = RefreshToken.for_user(user)
-                    access_token = refresh.access_token
+                # Verify the password
+                if not authenticate(username=username, password=password):
+                    return Response({"error": "Invalid Password"}, status=status.HTTP_401_UNAUTHORIZED)
 
-                    login(request, user)
+                # Send email verification for login
+                send_mail_for_login(user)
 
-                    response_data = {
-                        "message": "Login successful!",
-                        "access_token": str(access_token),
-                        "refresh_token": str(refresh),
-                    }
-                    response = Response(response_data, status=status.HTTP_200_OK)
-                    response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-                    response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-                    logger.info(f"User {user.username} logged in successfully")
-                    return response
-                else:
-                    return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
 
-            logger.error(f"Serializer errors: {serializer.errors}")
-            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+                login(request, user)
+
+                response_data = {
+                    "message": "Login successful!",
+                    "access_token": str(access_token),
+                    "refresh_token": str(refresh),
+                }
+                response = Response(response_data, status=status.HTTP_200_OK)
+                response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+                response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+                logger.info(f"User {user.username} logged in successfully")
+                return response
+            logger.error(f"Serializer error: {serializer.errors}")
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Register View
-from datetime import timedelta
+
 
 class RegisterView(APIView):
     @csrf_exempt
