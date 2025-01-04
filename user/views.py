@@ -230,19 +230,32 @@ class PasswordResetConfirmView(APIView):
             # If the token is invalid, return an error response
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
 # SubmitNewPasswordView
+
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
     def post(self, request):
         user_id = request.data.get('user_id')
         new_password = request.data.get('new_password')
+        token = request.data.get('token')  # Assume the token is sent in the request body
+
+        # Check if token and user_id are provided
+        if not token or not user_id:
+            return Response({"error": "User ID and token are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        # Validate token
+        if not default_token_generator.check_token(user, token):
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
         # Update the user's password
         user.set_password(new_password)
         user.save()
+
+        # Send password reset confirmation email
         send_password_reset_confirmation(user)
+
         return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
