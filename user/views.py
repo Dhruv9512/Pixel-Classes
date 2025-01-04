@@ -6,6 +6,7 @@ from rest_framework import status
 from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
@@ -14,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.core.management.utils import get_random_secret_key
-from .utils import send_mail_for_register, send_mail_for_login, generate_otp
+from .utils import send_mail_for_register, send_mail_for_login, generate_otp,send_password_reset_email,send_password_reset_confirmation
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
@@ -114,9 +115,6 @@ class LoginView(APIView):
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -137,18 +135,20 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            response = Response(serializer.data, status=status.HTTP_201_CREATED)
+            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1))
             logger.info(f"User {username} registered successfully")
             send_mail_for_register(user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return response
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 # Resend OTP View
 class ResendOTPView(APIView):
     """View to resend OTP to the user."""
-    
+    @csrf_exempt
     def post(self, request):
         username = request.data.get('username')
         
@@ -169,3 +169,102 @@ class ResendOTPView(APIView):
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"error": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# PasswordResetRequestView
+class PasswordResetRequestView(APIView):
+    @csrf_exempt
+    def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find the user by email
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Generate a token using Django's default token generator
+            token = default_token_generator.make_token(user)
+
+            # Build the password reset URL, including the user ID and token
+            reset_url = request.build_absolute_uri(
+                reverse('password_reset_confirm', args=[user.pk, token])
+            )
+
+            # Send the reset link to the user's email
+            send_password_reset_email(user,reset_url)
+            logger.info(f"Password reset email sent to {user.email}")
+
+            # Return a success response (Note: don't mention whether the user exists for security reasons)
+            return Response({"message": "Password reset email has been sent."}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            logger.warning(f"Password reset attempted for non-existent email: {email}")
+            return Response({"message": "Password reset email has been sent."}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Error during password reset process for {email}: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# PasswordResetConfirmView
+class PasswordResetConfirmView(APIView):
+    @csrf_exempt
+    def post(self, request, user_id, token):
+        # Find the user by ID
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the token is valid
+        if default_token_generator.check_token(user, token):
+
+
+            # Return a response indicating that the user is now able to reset their password
+            return Response({
+                "message": "Token is valid. Please go to the new password page to reset your password."
+            }, status=status.HTTP_200_OK)
+        
+            # # Generate a new password for the user
+            # new_password = get_random_secret_key()
+
+            # # Set the new password
+            # user.set_password(new_password)
+            # user.save()
+
+            # # Send the new password to the user's email
+            # send_mail(
+            #     "Password Reset Successful",
+            #     f"Your new password is: {new_password}",
+            #     EMAIL_HOST_USER,
+            #     [user.email],
+            # )
+            logger.info(f"Password reset successful for user: {user.username}")
+
+            # Return a success response
+            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+
+        # If the token is invalid, return an error response
+        return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+    
+# SubmitNewPasswordView
+class SubmitNewPasswordView(APIView):
+    @csrf_exempt
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        new_password = request.data.get('new_password')
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Update the user's password
+        user.set_password(new_password)
+        user.save()
+        send_password_reset_confirmation(user)
+        return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)

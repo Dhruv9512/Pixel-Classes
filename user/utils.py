@@ -63,3 +63,48 @@ def send_mail_for_login(user):
         logger.info(f"Sent login verification email to {user.email}")
     except Exception as e:
         logger.error(f"Error sending login verification email: {str(e)}")
+
+
+# reset password mail
+@csrf_exempt
+def send_password_reset_email(user,url):
+    """
+    Sends a password reset email to the user with a link to reset their password.
+    """
+    # Set email subject
+    subject = "Password Reset Request"
+    
+    # Render the email body from the template with context variables
+    message = render_to_string(
+        'reset_password/send_password_reset_email.html',
+        {'url': url, 'username': user.username}
+    )
+
+    try:
+        # Send the email (using the default email address in Django settings)
+        send_mail(
+            subject,
+            message,
+            EMAIL_HOST_USER,  # Email address from settings
+            [user.email],  # Recipient email address
+            html_message=message  # HTML message version
+        )
+        logger.info(f"Sent password reset email to {user.email}")
+    except Exception as e:
+        logger.error(f"Error sending password reset email to {user.email}: {str(e)}")
+
+
+# Send password reset confirmation email
+def send_password_reset_confirmation(user):
+    subject = "Password Reset Successful"
+    message = "Your password has been successfully reset."
+    from_email = EMAIL_HOST_USER  # Use the email defined in your settings
+    recipient_list = [user.email]  # Recipient is the user's email
+
+    try:
+        send_mail(subject, message, from_email, recipient_list)
+        # Log success if needed
+        logger.info(f"Password reset confirmation email sent to {user.email}")
+    except Exception as e:
+        # Log failure if needed
+        logger.error(f"Error sending password reset confirmation email to {user.email}: {str(e)}")
