@@ -46,7 +46,11 @@ class VerifyOTPView(APIView):
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         # Fetch stored OTP from cache
-        stored_otp = cache.get(f"otp_{user.pk}")
+        try:
+            stored_otp = cache.get(f"otp_{user.pk}")
+        except Exception as e:
+            logger.error(f"Error accessing OTP cache for user {user.username}: {str(e)}")
+            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         if stored_otp is None:
             logger.warning(f"OTP expired or not generated for user: {user.username}")
@@ -58,10 +62,10 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
             logger.info(f"Account activated successfully for user: {user.username}")
+            return Response({"message": "Account successfully activated."}, status=status.HTTP_200_OK)
         else:
             logger.warning(f"Invalid OTP provided for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
 
 # Login View
 class LoginView(APIView):
