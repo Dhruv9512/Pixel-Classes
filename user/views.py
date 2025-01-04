@@ -212,6 +212,7 @@ class PasswordResetRequestView(APIView):
 
 
 # PasswordResetConfirmView
+
 class PasswordResetConfirmView(APIView):
     @csrf_exempt
     def get(self, request, user_id, token):
@@ -223,17 +224,13 @@ class PasswordResetConfirmView(APIView):
 
         # Check if the token is valid
         if default_token_generator.check_token(user, token):
-
-
             # Return a response indicating that the user is now able to reset their password
             return Response({
-                "message": "Token is valid. Please go to the new password page to reset your password."
+                "message": "Token is valid. Please go to the new password page to reset your password.",
             }, status=status.HTTP_200_OK)
-            return HttpResponseRedirect("https://pixelclass.netlify.app/newpassword")
         else:
             # If the token is invalid, return an error response
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
-    
 # SubmitNewPasswordView
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
