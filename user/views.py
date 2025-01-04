@@ -127,12 +127,12 @@ class RegisterView(APIView):
         # Check if email already exists
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
-            return Response({"email": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check if username already exists
         if User.objects.filter(username=username).exists():
             logger.warning(f"Registration failed: Username {username} already exists.")
-            return Response({"username": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
@@ -154,7 +154,7 @@ class ResendOTPView(APIView):
         
         # Ensure username is provided in the request
         if not username:
-            return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Usename name error please retry to login again"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Fetch user from the database
         try:
@@ -165,7 +165,7 @@ class ResendOTPView(APIView):
         try:
             send_mail_for_register(user)
             logger.info(f"Resent OTP email to {user.email}")
-            return Response({"detail": "OTP resent successfully."}, status=status.HTTP_200_OK)
+            return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
-            return Response({"detail": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
