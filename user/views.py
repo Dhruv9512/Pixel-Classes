@@ -135,8 +135,8 @@ class RegisterView(APIView):
             user = serializer.save()
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
             response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
-            logger.info(f"User {user.username} registered successfully")
+            response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1))
+            logger.info(f"User {username} registered successfully")
             send_mail_for_register(user)
             return response
 
