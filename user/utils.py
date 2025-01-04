@@ -40,6 +40,11 @@ def send_mail_for_register(user):
         message = render_to_string('Signup/Email_Register_OTP.html', context)
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
         logger.info(f"Sent OTP email to {user.email}")
+        context1 = {
+            'username': user.username,
+            'otp': otp,
+        }
+        return Response(context1, status=status.HTTP_200_OK)
     except Exception as e:
         logger.error(f"Error sending email to {user.email}: {str(e)}")
         raise
