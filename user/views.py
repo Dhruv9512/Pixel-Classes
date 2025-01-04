@@ -29,7 +29,7 @@ class VerifyOTPView(APIView):
         
         # Validate the incoming OTP data
         if not serializer.is_valid():
-            logger.error(f"OTP verification failed: {serializer.errors}")
+            logger.error(f"OTP verification failed: {serializer.errors}, data: {request.data}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
@@ -56,6 +56,10 @@ class VerifyOTPView(APIView):
             logger.warning(f"OTP expired or not generated for user: {user.username}")
             return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Log the OTPs for debugging (make sure to disable in production)
+        logger.info(f"Stored OTP for user {user.username}: {stored_otp}")
+        logger.info(f"Entered OTP: {otp}")
+
         # Check if the OTP matches the stored one
         if otp == stored_otp:
             user.is_active = True
@@ -64,9 +68,10 @@ class VerifyOTPView(APIView):
             logger.info(f"Account activated successfully for user: {user.username}")
             return Response({"message": "Account successfully activated."}, status=status.HTTP_200_OK)
         else:
-            logger.warning(f"Invalid OTP provided for user: {user.username}")
+            logger.warning(f"Invalid OTP provided for user: {user.username}. Entered: {otp}, Stored: {stored_otp}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
+        
+        
 # Login View
 class LoginView(APIView):
     @csrf_exempt
