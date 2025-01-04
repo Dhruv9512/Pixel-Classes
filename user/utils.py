@@ -95,6 +95,7 @@ def send_password_reset_email(user,url):
 
 
 # Send password reset confirmation email
+@csrf_exempt
 def send_password_reset_confirmation(user):
     subject = "Password Reset Successful"
     message = "Your password has been successfully reset."
