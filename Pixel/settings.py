@@ -48,17 +48,14 @@ ROOT_URLCONF = 'Pixel.urls'
 
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
-# Directory for collecting static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Project-level static files
+# Directory for collecting static files (for production use)
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Directory for project-level static files
 
-# For production, Django will collect all static files into this directory
+# Directory where Django will collect all static files for production
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
 
 # Templates configuration
 TEMPLATES = [
