@@ -18,7 +18,6 @@ from .utils import send_mail_for_register, send_mail_for_login, generate_otp
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
-from django.http import HttpResponseRedirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -130,10 +129,10 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            logger.info(f"User {user.username} registered successfully")
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
             response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
             response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
+            logger.info(f"User {user.username} registered successfully")
             send_mail_for_register(user)
             return response
 
