@@ -20,6 +20,7 @@ from datetime import timedelta
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
+from django.http import HttpResponseRedirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -228,28 +229,10 @@ class PasswordResetConfirmView(APIView):
             return Response({
                 "message": "Token is valid. Please go to the new password page to reset your password."
             }, status=status.HTTP_200_OK)
-        
-            # # Generate a new password for the user
-            # new_password = get_random_secret_key()
-
-            # # Set the new password
-            # user.set_password(new_password)
-            # user.save()
-
-            # # Send the new password to the user's email
-            # send_mail(
-            #     "Password Reset Successful",
-            #     f"Your new password is: {new_password}",
-            #     EMAIL_HOST_USER,
-            #     [user.email],
-            # )
-            logger.info(f"Password reset successful for user: {user.username}")
-
-            # Return a success response
-            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
-
-        # If the token is invalid, return an error response
-        return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+            return HttpResponseRedirect("https://pixelclass.netlify.app/newpassword")
+        else:
+            # If the token is invalid, return an error response
+            return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
     
 # SubmitNewPasswordView
 class SubmitNewPasswordView(APIView):
