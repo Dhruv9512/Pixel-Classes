@@ -214,7 +214,7 @@ class PasswordResetRequestView(APIView):
 # PasswordResetConfirmView
 class PasswordResetConfirmView(APIView):
     @csrf_exempt
-    def post(self, request, user_id, token):
+    def get(self, request, user_id, token):
         # Find the user by ID
         try:
             user = User.objects.get(pk=user_id)
