@@ -41,6 +41,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
 ]
 
 # Root URL configuration
@@ -48,17 +49,19 @@ ROOT_URLCONF = 'Pixel.urls'
 
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
-# Directory for collecting static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Project-level static files
+# Use Whitenoise for serving static files with compression and caching
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Directory for collecting static files (when running `collectstatic`)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),  # Add the static directory at the project level
+]
 
 # For production, Django will collect all static files into this directory
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
 
 # Templates configuration
 TEMPLATES = [
