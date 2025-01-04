@@ -23,55 +23,49 @@ import logging
 logger = logging.getLogger(__name__)
 
 # OTP Verification View
+
 class VerifyOTPView(APIView):
+    @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
+        # Deserialize incoming OTP data
         serializer = OTPSerializer(data=request.data)
         
-        # Validate the incoming OTP data
+        # Validate OTP
         if not serializer.is_valid():
-            logger.error(f"OTP verification failed: {serializer.errors}, data: {request.data}")
+            logger.error(f"OTP verification failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        username = request.data.get('username')
+        username = request.data.get('username')  # Get username from request
         
         # Ensure username is provided in the request
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Fetch user from the database
+        
+        # Fetch user from the database by username
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Fetch stored OTP from cache
-        try:
-            stored_otp = cache.get(f"otp_{user.pk}")
-        except Exception as e:
-            logger.error(f"Error accessing OTP cache for user {user.username}: {str(e)}")
-            return Response({"error": "Internal server error."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+        # Retrieve the stored OTP from cache
+        stored_otp = cache.get(f"otp_{user.pk}")
+
+        # Check if OTP is available or expired
         if stored_otp is None:
-            logger.warning(f"OTP expired or not generated for user: {user.username}")
             return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Log the OTPs for debugging (make sure to disable in production)
-        logger.info(f"Stored OTP for user {user.username}: {stored_otp}")
-        logger.info(f"Entered OTP: {otp}")
-
-        # Check if the OTP matches the stored one
+        # Compare the entered OTP with the stored OTP
         if otp == stored_otp:
-            user.is_active = True
+            user.is_active = True  # Activate user account
             user.save()
-            cache.delete(f"otp_{user.pk}")  # Remove OTP from cache
+            cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
             logger.info(f"Account activated successfully for user: {user.username}")
-            return Response({"message": "Account successfully activated."}, status=status.HTTP_200_OK)
+            return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
         else:
-            logger.warning(f"Invalid OTP provided for user: {user.username}. Entered: {otp}, Stored: {stored_otp}")
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
+            logger.warning(f"Invalid OTP entered for user: {user.username}")
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
+
 # Login View
 class LoginView(APIView):
     @csrf_exempt
