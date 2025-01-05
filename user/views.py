@@ -225,7 +225,7 @@ class PasswordResetConfirmView(APIView):
         # Check if the token is valid
         if default_token_generator.check_token(user, token):
             # Return a response indicating that the user is now able to reset their password
-            redirect_url = f"http://localhost:5173/newpassword/?id={user_id}"
+            redirect_url = f"https://pixelclass.netlify.app/newpassword/?id={user_id}"
 
             # Redirect to the URL with the user ID
             return HttpResponseRedirect(redirect_url)
