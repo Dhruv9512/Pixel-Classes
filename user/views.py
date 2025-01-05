@@ -20,7 +20,7 @@ from datetime import timedelta
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
-from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -225,10 +225,12 @@ class PasswordResetConfirmView(APIView):
         # Check if the token is valid
         if default_token_generator.check_token(user, token):
             # Return a response indicating that the user is now able to reset their password
-            redirect_url = f"https://pixelclass.netlify.app/newpassword/?id={user_id}"
+            redirect_url = "https://pixelclass.netlify.app/newpassword"
 
             # Redirect to the URL with the user ID
-            return HttpResponseRedirect(redirect_url)
+            response = redirect(redirect_url)
+            response.set_cookie('user_id', user_id)
+            return response
         else:
             # If the token is invalid, return an error response
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
