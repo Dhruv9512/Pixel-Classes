@@ -25,3 +25,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     
 class OTPSerializer(serializers.Serializer):
     otp = serializers.CharField(min_length=6, max_length=6)
+
+
+# Serializer to validate the incoming data
+class PasswordResetSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    new_password = serializers.CharField(min_length=6)

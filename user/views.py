@@ -3,7 +3,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer
+from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer, PasswordResetSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
 from django.urls import reverse
@@ -225,7 +225,10 @@ class PasswordResetConfirmView(APIView):
         # Check if the token is valid
         if default_token_generator.check_token(user, token):
             # Return a response indicating that the user is now able to reset their password
-            return HttpResponseRedirect("http://localhost:5173/newpassword/")
+            redirect_url = f"http://localhost:5173/newpassword/?id={user_id}"
+
+            # Redirect to the URL with the user ID
+            return HttpResponseRedirect(redirect_url)
         else:
             # If the token is invalid, return an error response
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
@@ -234,28 +237,28 @@ class PasswordResetConfirmView(APIView):
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
     def post(self, request):
-        user_id = request.data.get('user_id')
-        new_password = request.data.get('new_password')
-        token = request.data.get('token')  # Assume the token is sent in the request body
+        # Validate input using the serializer
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            user_id = serializer.validated_data['user_id']
+            new_password = serializer.validated_data['new_password']
 
-        # Check if token and user_id are provided
-        if not token or not user_id:
-            return Response({"error": "User ID and token are required."}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            user = User.objects.get(pk=user_id)
-        except User.DoesNotExist:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            # Check if the password meets the necessary requirements
+            if len(new_password) < 6:
+                return Response({"error": "Password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate token
-        if not default_token_generator.check_token(user, token):
-            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+            # Update the user's password
+            user.set_password(new_password)
+            user.save()
 
-        # Update the user's password
-        user.set_password(new_password)
-        user.save()
+            # Send a password reset confirmation email (you can customize this function)
+            send_password_reset_confirmation(user)
 
-        # Send password reset confirmation email
-        send_password_reset_confirmation(user)
+            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
-        return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
