@@ -229,7 +229,7 @@ class PasswordResetConfirmView(APIView):
 
             # Redirect to the URL with the user ID
             response = redirect(redirect_url)
-            response.set_cookie('user_id', user_id)
+            response.set_cookie('user_id', user_id, httponly=True)
             return response
         else:
             # If the token is invalid, return an error response
