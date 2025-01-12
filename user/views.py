@@ -137,8 +137,8 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
-            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1))
-            response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
+            response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
             logger.info(f"User {username} registered successfully")
             send_mail_for_register(user)
             return response
@@ -229,7 +229,7 @@ class PasswordResetConfirmView(APIView):
 
             # Redirect to the URL with the user ID
             response = redirect(redirect_url)
-            response.set_cookie('user_id', user_id, httponly=True)
+            response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None')
             return response
         else:
             # If the token is invalid, return an error response
