@@ -16,6 +16,7 @@ import logging
 from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from .models import PasswordResetToken 
+from django.utils.timezone import now
 
 
 # Set up logging
@@ -212,41 +213,33 @@ class PasswordResetRequestView(APIView):
 class PasswordResetConfirmView(APIView):
     @csrf_exempt
     def get(self, request, user_id, token):
-        # Find the user by ID
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if the token is valid
         if default_token_generator.check_token(user, token):
-
-            # Token is valid, mark it as verified in the database
             try:
                 password_reset_token = PasswordResetToken.objects.get(user=user, token=token)
+                if password_reset_token.expiry_date < now():
+                    return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
                 password_reset_token.is_verified = True
                 password_reset_token.save()
+
+                # Redirect and set cookies
+                redirect_url = "https://pixelclass.netlify.app/newpassword"
+                response = HttpResponseRedirect(redirect_url)
+                max_age = int((password_reset_token.expiry_date - now()).total_seconds())
+                response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None', max_age=max_age)
+                response.set_cookie('is_verified', password_reset_token.is_verified, httponly=True, secure=True, samesite='None', max_age=max_age)
+
+                return response
             except PasswordResetToken.DoesNotExist:
                 return Response({"error": "No reset token found for this user."}, status=status.HTTP_400_BAD_REQUEST)
-            # Return a response indicating that the user is now able to reset their password
-            redirect_url = "https://pixelclass.netlify.app/newpassword"
-            response = HttpResponseRedirect(redirect_url)
-            response.set_cookie(
-                'user_id', user_id, 
-                httponly=True, secure=True, 
-                samesite='None', max_age=password_reset_token.expiry_date  # Expire in 1 hour
-            )
-            # Optionally set other cookies if needed
-            response.set_cookie(
-                'is_verified', password_reset_token.is_verified, 
-                httponly=True, secure=True, 
-                samesite='None', max_age=password_reset_token.expiry_date
-            )
-
-            return response
         else:
-            # If the token is invalid, return an error response
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+
 # SubmitNewPasswordView
 
 class SubmitNewPasswordView(APIView):
