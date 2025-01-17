@@ -20,7 +20,7 @@ from datetime import timedelta
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
-from django.shortcuts import redirect
+from django.shortcuts import HttpResponseRedirect
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -228,7 +228,7 @@ class PasswordResetConfirmView(APIView):
             redirect_url = "https://pixelclass.netlify.app/newpassword"
 
             # Redirect to the URL with the user ID
-            response = redirect(redirect_url)
+            response = HttpResponseRedirect(redirect_url)
             response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None')
             return response
         else:
