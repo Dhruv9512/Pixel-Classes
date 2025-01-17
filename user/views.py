@@ -231,8 +231,8 @@ class PasswordResetConfirmView(APIView):
                 redirect_url = "https://pixelclass.netlify.app/newpassword"
                 response = HttpResponseRedirect(redirect_url)
                 max_age = int((password_reset_token.expiry_date - now()).total_seconds())
-                response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None', max_age=max_age)
-                response.set_cookie('is_verified', "True", httponly=True, secure=True, samesite='None', max_age=max_age)
+                response.set_cookie('user_id', user_id, max_age=max_age)
+                response.set_cookie('is_verified', "True", max_age=max_age)
 
                 return response
             except PasswordResetToken.DoesNotExist:
