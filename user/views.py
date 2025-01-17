@@ -232,7 +232,7 @@ class PasswordResetConfirmView(APIView):
                 response = HttpResponseRedirect(redirect_url)
                 max_age = int((password_reset_token.expiry_date - now()).total_seconds())
                 response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None', max_age=max_age)
-                response.set_cookie('is_verified', password_reset_token.is_verified, httponly=True, secure=True, samesite='None', max_age=max_age)
+                response.set_cookie('is_verified', "True", httponly=True, secure=True, samesite='None', max_age=max_age)
 
                 return response
             except PasswordResetToken.DoesNotExist:
