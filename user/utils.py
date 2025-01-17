@@ -32,7 +32,7 @@ def generate_reset_token(user):
 
     # Save the token in the database
     password_reset_token = PasswordResetToken(
-        user=user.id,
+        user=user,
         token=token,
         expiry_date=expiry_date
     )
