@@ -1,26 +1,22 @@
 from django.contrib.auth import authenticate, login
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer, PasswordResetSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.mail import send_mail
 from django.urls import reverse
-from django.template.loader import render_to_string
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
-from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.encoding import force_bytes
-from django.core.management.utils import get_random_secret_key
-from .utils import send_mail_for_register, send_mail_for_login, generate_otp,send_password_reset_email,send_password_reset_confirmation
+from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,send_password_reset_confirmation,generate_reset_token
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
+from .models import PasswordResetToken 
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -188,7 +184,7 @@ class PasswordResetRequestView(APIView):
 
         try:
             # Generate a token using Django's default token generator
-            token = default_token_generator.make_token(user)
+            token = generate_reset_token(user)
 
             # Build the password reset URL, including the user ID and token
             reset_url = request.build_absolute_uri(
@@ -224,18 +220,29 @@ class PasswordResetConfirmView(APIView):
 
         # Check if the token is valid
         if default_token_generator.check_token(user, token):
+
+            # Token is valid, mark it as verified in the database
+            try:
+                password_reset_token = PasswordResetToken.objects.get(user=user, token=token)
+                password_reset_token.is_verified = True
+                password_reset_token.save()
+            except PasswordResetToken.DoesNotExist:
+                return Response({"error": "No reset token found for this user."}, status=status.HTTP_400_BAD_REQUEST)
             # Return a response indicating that the user is now able to reset their password
             redirect_url = "https://pixelclass.netlify.app/newpassword"
-
-           # Redirect to the URL with the user ID and set the cookie
             response = HttpResponseRedirect(redirect_url)
-            
-            # Set cookie with secure and SameSite=None for cross-origin
             response.set_cookie(
                 'user_id', user_id, 
                 httponly=True, secure=True, 
-                samesite='None', max_age=3600  # Cookie expires in 1 hour
+                samesite='None', max_age=password_reset_token.expiry_date  # Expire in 1 hour
             )
+            # Optionally set other cookies if needed
+            response.set_cookie(
+                'is_verified', password_reset_token.is_verified, 
+                httponly=True, secure=True, 
+                samesite='None', max_age=password_reset_token.expiry_date
+            )
+
             return response
         else:
             # If the token is invalid, return an error response
@@ -270,3 +277,30 @@ class SubmitNewPasswordView(APIView):
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+# PasswordResetStatusView
+class PasswordResetStatusView(APIView):
+    @csrf_exempt
+    def get(self, request):
+        # Get user_id from cookies (or from query parameters or request data)
+        user_id = request.COOKIES.get('user_id')  # Assuming the user_id is stored in a cookie
+        
+        if not user_id:
+            return Response({"error": "User ID not found in cookies."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch the user by user_id
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Assuming user has `is_verified` and `is_reset` flags. Modify according to your model.
+        is_verified = getattr(user, 'is_verified', False)  # Defaults to False if not found
+        is_reset = getattr(user, 'is_reset', False)  # Defaults to False if not found
+
+        # Return the response with the user's password reset status
+        return Response({
+            "is_verified": is_verified,
+            "is_reset": is_reset,
+            "message": "Password reset status retrieved successfully."
+        }, status=status.HTTP_200_OK)

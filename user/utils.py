@@ -8,7 +8,10 @@ from django.conf.global_settings import EMAIL_HOST_USER
 from rest_framework import status
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
-
+from datetime import timedelta
+from django.utils import timezone
+from django.contrib.auth.tokens import default_token_generator
+from .models import PasswordResetToken
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,23 @@ def generate_otp():
     logger.debug(f"Generated OTP: {otp}")
     return otp
 
+# Generate token
+def generate_reset_token(user):
+    # Generate token
+    token = default_token_generator.make_token(user)
+
+    # Set token expiration date (1 hour from now)
+    expiry_date = timezone.now() + timedelta(hours=1)
+
+    # Save the token in the database
+    password_reset_token = PasswordResetToken(
+        user=user,
+        token=token,
+        expiry_date=expiry_date
+    )
+    password_reset_token.save()
+
+    return token
 # Send Registration OTP email
 @csrf_exempt
 def send_mail_for_register(user):

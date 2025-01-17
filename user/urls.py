@@ -8,6 +8,7 @@ urlpatterns = [
     path('resend-otp/', ResendOTPView.as_view(), name='resend_otp'),
     path('password_reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('reset/<int:user_id>/<str:token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('reset/status/', PasswordResetStatusView.as_view(), name='password_reset_status'),
     path('submit-new-password/', SubmitNewPasswordView.as_view(), name='SubmitNewPasswordView'),
 
 ]
