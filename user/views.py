@@ -227,9 +227,15 @@ class PasswordResetConfirmView(APIView):
             # Return a response indicating that the user is now able to reset their password
             redirect_url = "https://pixelclass.netlify.app/newpassword"
 
-            # Redirect to the URL with the user ID
+           # Redirect to the URL with the user ID and set the cookie
             response = HttpResponseRedirect(redirect_url)
-            response.set_cookie('user_id', user_id, httponly=True, secure=True, samesite='None')
+            
+            # Set cookie with secure and SameSite=None for cross-origin
+            response.set_cookie(
+                'user_id', user_id, 
+                httponly=True, secure=True, 
+                samesite='None', max_age=3600  # Cookie expires in 1 hour
+            )
             return response
         else:
             # If the token is invalid, return an error response
