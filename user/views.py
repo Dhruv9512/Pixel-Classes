@@ -274,12 +274,12 @@ class SubmitNewPasswordView(APIView):
 # PasswordResetStatusView
 class PasswordResetStatusView(APIView):
     @csrf_exempt
-    def get(self, request):
-        # Get user_id from cookies (or from query parameters or request data)
-        user_id = request.COOKIES.get('user_id')  # Assuming the user_id is stored in a cookie
+    def post(self, request):
+        # Get user_id from the POST data (assuming it's sent as part of the request body)
+        user_id = request.data.get('user_id')  # Get 'user_id' from the POST body
         
         if not user_id:
-            return Response({"error": "User ID not found in cookies."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "User ID not provided in the request."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Fetch the user by user_id
         try:
