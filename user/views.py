@@ -228,11 +228,8 @@ class PasswordResetConfirmView(APIView):
                 password_reset_token.save()
 
                 # Redirect and set cookies
-                redirect_url = "https://pixelclass.netlify.app/newpassword"
+                redirect_url = "https://pixelclass.netlify.app/newpassword/{token}"
                 response = HttpResponseRedirect(redirect_url)
-                max_age = int((password_reset_token.expiry_date - now()).total_seconds())
-                response.set_cookie('user_id', user_id, max_age=max_age)
-                response.set_cookie('is_verified', "True", max_age=max_age)
 
                 return response
             except PasswordResetToken.DoesNotExist:
@@ -243,29 +240,36 @@ class PasswordResetConfirmView(APIView):
 # SubmitNewPasswordView
 
 class SubmitNewPasswordView(APIView):
-    @csrf_exempt
+    @method_decorator(csrf_exempt)
     def post(self, request):
         # Validate input using the serializer
         serializer = PasswordResetSerializer(data=request.data)
         if serializer.is_valid():
-            user_id = serializer.validated_data['user_id']
+            token_value = serializer.validated_data['token']
             new_password = serializer.validated_data['new_password']
 
             try:
-                user = User.objects.get(pk=user_id)
-            except User.DoesNotExist:
-                return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+                # Retrieve the token and validate it
+                token = PasswordResetToken.objects.get(token=token_value, is_verified=True, is_reset=False)
+                if token.is_expired():
+                    return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if the password meets the necessary requirements
-            if len(new_password) < 6:
-                return Response({"error": "Password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+                # Retrieve the user associated with the token
+                user = token.user
+
+            except PasswordResetToken.DoesNotExist:
+                return Response({"error": "Invalid or expired token."}, status=status.HTTP_404_NOT_FOUND)
 
             # Update the user's password
             user.set_password(new_password)
             user.save()
 
-            # Send a password reset confirmation email (you can customize this function)
-            send_password_reset_confirmation(user)
+            # Mark the token as used
+            token.is_reset = True
+            token.save()
+
+            # (Optional) Send a password reset confirmation email
+            # send_password_reset_confirmation(user)
 
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 

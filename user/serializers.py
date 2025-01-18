@@ -29,5 +29,5 @@ class OTPSerializer(serializers.Serializer):
 
 # Serializer to validate the incoming data
 class PasswordResetSerializer(serializers.Serializer):
-    user_id = serializers.IntegerField()
+    token = serializers.CharField()
     new_password = serializers.CharField(min_length=6)
