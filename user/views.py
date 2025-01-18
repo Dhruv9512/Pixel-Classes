@@ -240,7 +240,7 @@ class PasswordResetConfirmView(APIView):
 # SubmitNewPasswordView
 
 class SubmitNewPasswordView(APIView):
-    @method_decorator(csrf_exempt)
+    @csrf_exempt
     def post(self, request):
         # Validate input using the serializer
         serializer = PasswordResetSerializer(data=request.data)
