@@ -228,7 +228,7 @@ class PasswordResetConfirmView(APIView):
                 password_reset_token.save()
 
                 # Redirect and set cookies
-                redirect_url = "https://pixelclass.netlify.app/newpassword/{token}"
+                redirect_url = f"https://pixelclass.netlify.app/newpassword/{token}"
                 response = HttpResponseRedirect(redirect_url)
 
                 return response
