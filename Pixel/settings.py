@@ -20,7 +20,7 @@ ALLOWED_HOSTS = [
 
 # Installed Apps
 INSTALLED_APPS = [
-    'Home',
+    'home',
     'corsheaders',  # For CORS handling
     'user',  # Your app
     'django.contrib.admin',
