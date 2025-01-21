@@ -1,8 +1,10 @@
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 from decouple import config
 import os
 from datetime import timedelta
-
+import dj_database_url
 # Base directory setup
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -86,14 +88,7 @@ WSGI_APPLICATION = 'Pixel.wsgi.application'
 
 # Database Configuration
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DATABASE"),
-        "USER": config("POSTGRES_USER"),
-        "PASSWORD": config("POSTGRES_PASSWORD"),
-        "HOST": config("POSTGRES_HOST", default="127.0.0.1"),
-        "PORT": config("POSTGRES_PORT", default="5432"),
-    }
+   'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
 }
 
 # Email Settings
