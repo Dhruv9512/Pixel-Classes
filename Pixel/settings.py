@@ -21,7 +21,8 @@ ALLOWED_HOSTS = [
 # Installed Apps
 INSTALLED_APPS = [
     'corsheaders',  # For CORS handling
-    'user',  # Your app
+    'user',
+    'home',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -56,8 +57,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Directory for collecting static files (when running `collectstatic`)
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),  # Add the static directory at the project level
+    BASE_DIR / "static",  # or use the full path like 'C:/pxc/Pixel-Classes/static'
 ]
+
 
 # For production, Django will collect all static files into this directory
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
