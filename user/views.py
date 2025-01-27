@@ -17,7 +17,20 @@ from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from .models import PasswordResetToken 
 from django.utils.timezone import now
+import schedule
+from django.utils import timezone
 
+def health_check():
+    try:
+        # Directly query for expired tokens instead of fetching all tokens
+        expired_tokens = PasswordResetToken.objects.filter(expiry_date__lt=timezone.now())
+    
+        # Delete the expired tokens in bulk to reduce database hits
+        expired_tokens.delete()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+schedule.every(1).hour.do(health_check)
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -287,7 +300,8 @@ class PasswordResetStatusView(APIView):
 
         # Fetch the user by user_id
         try:
-            user = User.objects.get(email=email)
+            # Get the latest user by the email, ordering by 'created_at' in descending order
+            user = User.objects.filter(email=email).order_by('-created_at').first()
         except User.DoesNotExist:
             return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
 
