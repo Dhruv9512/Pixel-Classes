@@ -280,14 +280,14 @@ class PasswordResetStatusView(APIView):
     @csrf_exempt
     def post(self, request):
         # Get user_id from the POST data (assuming it's sent as part of the request body)
-        user_id = request.data.get('user_id')  # Get 'user_id' from the POST body
+        email = request.data.get('email')  
         
-        if not user_id:
+        if not email:
             return Response({"error": "User ID not provided in the request."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Fetch the user by user_id
         try:
-            user = User.objects.get(pk=user_id)
+            user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
 
