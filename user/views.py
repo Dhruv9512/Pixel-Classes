@@ -334,9 +334,9 @@ class PasswordResetStatusView(APIView):
             )
 
         except Exception as e:
-            # Log the error and return a 500 response
-            print(f"Error: {e}")
+            import traceback
+            print(traceback.format_exc())  # Prints the full traceback for debugging
             return Response(
-                {"error": "An unexpected error occurred. Please try again later."},
+                {"error": f"An unexpected error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
