@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import courses
+from .views import coursesView , QuePdfView
 
 
 urlpatterns = [
-    path('courses/', courses.as_view(), name='courses'),
+    path('courses/', coursesView.as_view(), name='courses'),
+    path('QuePdf/', QuePdfView.as_view(), name='QuePdf'),
 ]
