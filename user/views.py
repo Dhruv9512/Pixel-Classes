@@ -301,8 +301,8 @@ class PasswordResetStatusView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Query for the latest user by email
-            user = PasswordResetToken.objects.filter(email=email).order_by('-created_at').first()
+            # Fetch the user by email
+            user = User.objects.filter(email=email).first()
 
             if not user:
                 return Response(
@@ -310,9 +310,18 @@ class PasswordResetStatusView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
+            # Fetch the latest password reset token for the user
+            token = PasswordResetToken.objects.filter(user=user).order_by('-created_at').first()
+
+            if not token:
+                return Response(
+                    {"error": "No password reset token found for this user."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
             # Retrieve password reset status flags
-            is_verified = getattr(user, 'is_verified', False)
-            is_reset = getattr(user, 'is_reset', False)
+            is_verified = getattr(token, 'is_verified', False)
+            is_reset = getattr(token, 'is_reset', False)
 
             # Return the password reset status
             return Response(
