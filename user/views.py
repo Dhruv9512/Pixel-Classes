@@ -290,28 +290,44 @@ class SubmitNewPasswordView(APIView):
     
 # PasswordResetStatusView
 class PasswordResetStatusView(APIView):
-    @csrf_exempt
     def post(self, request):
-        # Get user_id from the POST data (assuming it's sent as part of the request body)
-        email = request.data.get('email')  
-        
-        if not email:
-            return Response({"error": "User ID not provided in the request."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Fetch the user by user_id
         try:
-            # Get the latest user by the email, ordering by 'created_at' in descending order
+            # Extract email from the request body
+            email = request.data.get('email')
+            
+            if not email:
+                return Response(
+                    {"error": "Email not provided in the request."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Query for the latest user by email
             user = User.objects.filter(email=email).order_by('-created_at').first()
-        except User.DoesNotExist:
-            return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Assuming user has `is_verified` and `is_reset` flags. Modify according to your model.
-        is_verified = getattr(user, 'is_verified', False)  # Defaults to False if not found
-        is_reset = getattr(user, 'is_reset', False)  # Defaults to False if not found
+            if not user:
+                return Response(
+                    {"error": "No user found with this email."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
-        # Return the response with the user's password reset status
-        return Response({
-            "is_verified": is_verified,
-            "is_reset": is_reset,
-            "message": "Password reset status retrieved successfully."
-        }, status=status.HTTP_200_OK)
+            # Retrieve password reset status flags
+            is_verified = getattr(user, 'is_verified', False)
+            is_reset = getattr(user, 'is_reset', False)
+
+            # Return the password reset status
+            return Response(
+                {
+                    "is_verified": is_verified,
+                    "is_reset": is_reset,
+                    "message": "Password reset status retrieved successfully."
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except Exception as e:
+            # Log the error and return a 500 response
+            print(f"Error: {e}")
+            return Response(
+                {"error": "An unexpected error occurred. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
