@@ -302,7 +302,7 @@ class PasswordResetStatusView(APIView):
                 )
 
             # Query for the latest user by email
-            user = User.objects.filter(email=email).order_by('-created_at').first()
+            user = PasswordResetToken.objects.filter(email=email).order_by('-created_at').first()
 
             if not user:
                 return Response(
