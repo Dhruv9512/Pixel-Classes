@@ -8,5 +8,6 @@ class CourseListAdmin(admin.ModelAdmin):
     list_display = ('id','name')
 
 # Registering the model QuePdf
+@admin.register(QuePdf)
 class QuePdfAdmin(admin.ModelAdmin):
     list_display = ('id','course','pdf','sem')
