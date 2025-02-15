@@ -1,23 +1,34 @@
-# Use Miniconda as the base image
+# Use an official Python image
 FROM continuumio/miniconda3
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the environment file first to optimize caching
-COPY environment.yml .
+# Copy environment.yml
+COPY environment.yml /app/environment.yml
 
-# Ensure Conda is initialized and create the environment
+# Install system dependencies for mysqlclient
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libmysqlclient-dev \
+    default-libmysqlclient-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Initialize conda and create the environment
 RUN conda init bash && conda env create -f environment.yml
 
-# Activate the environment in every new shell
-RUN echo "conda activate myenv" >> ~/.bashrc
+# Activate the environment
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Copy the rest of the application
-COPY . .
+# Copy the application code
+COPY . /app
 
-# Expose the application port (default Django port is 8000)
-EXPOSE 8000
+# Install Python dependencies
+RUN pip install -r requirements.txt
 
-# Start the application using Gunicorn with the Conda environment
-CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "gunicorn", "--bind", "0.0.0.0:8000", "pixel-classes.wsgi:application"]
+# Expose the port your app runs on
+EXPOSE 5000
+
+# Command to run the application
+CMD ["python", "app.py"]
