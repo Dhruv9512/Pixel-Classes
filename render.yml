@@ -1,14 +1,9 @@
 services:
   - type: web
-    name: myapp
+    name: my-web-app
     env: docker
     plan: free
-    repo: https://github.com/Dhruv9512/YourRepoName
-    region: oregon
     dockerfilePath: ./Dockerfile
     envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: SECRET_KEY
-        sync: false
-    autoDeploy: true
+      - key: PORT
+        value: 8000

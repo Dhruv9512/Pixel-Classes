@@ -10,7 +10,7 @@ COPY environment.yml .
 # Create the Conda environment
 RUN conda env create -f environment.yml
 
-# Set default shell to use Conda environment
+# Activate the Conda environment by default
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
 # Set PATH for Conda environment
@@ -19,11 +19,11 @@ ENV PATH /opt/conda/envs/myenv/bin:$PATH
 # Copy the project files
 COPY . .
 
-# Run migrations (for Django projects)
-RUN python manage.py migrate || true  # Ignore errors if Django is not used
-
 # Expose port 8000 for the web app
 EXPOSE 8000
 
-# Start the server (Flask/Django)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]  # Change to `your_project.wsgi` for Django
+# Run migrations (if using Django)
+RUN python manage.py migrate || true  # Ignore errors if Django is not used
+
+# Start the web application
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]  # Change "app:app" to "your_project.wsgi" for Django
