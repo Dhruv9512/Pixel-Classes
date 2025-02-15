@@ -5,7 +5,4 @@ services:
     repo: https://github.com/Dhruv9512/Pixel-Classes
     plan: free
     region: oregon
-    envVars:
-      - key: DATABASE_URL
-        value: your_database_url
     env: docker
