@@ -4,8 +4,8 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /app
 
-# Copy environment.yml and requirements.txt
-COPY environment.yml requirements.txt /app/
+# Copy environment.yml
+COPY environment.yml /app/
 
 # Install required system dependencies for MySQL
 RUN apt-get update && apt-get install -y \
@@ -15,20 +15,20 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create the Conda environment and ensure it's activated in the shell
-RUN conda env create -f environment.yml && conda clean --all -y
+# Create the Conda environment from environment.yml
+RUN conda env create -f /app/environment.yml
 
-# Change the default shell to use Conda
+# Activate the environment
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Install additional Python dependencies (if required)
-RUN conda run -n myenv pip install --no-cache-dir -r requirements.txt
+# Install additional dependencies for Django if needed (like gunicorn)
+RUN pip install gunicorn
 
-# Copy the rest of the application code
-COPY . /app
+# Copy the application code (make sure the Django project code is in the current directory)
+COPY . /app/
 
-# Expose the port the application runs on
-EXPOSE 5000
+# Expose the port Django runs on (usually 8000 in development)
+EXPOSE 8000
 
-# Set the command to run the application inside the Conda environment
-CMD ["conda", "run", "-n", "myenv", "python", "app.py"]
+# Command to run the Django development server
+CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "python", "manage.py", "runserver", "0.0.0.0:8000"]
