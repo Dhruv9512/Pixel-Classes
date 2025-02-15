@@ -4,20 +4,20 @@ FROM continuumio/miniconda3
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy only the environment file first to optimize caching
+# Copy the environment file first to optimize caching
 COPY environment.yml .
 
-# Create the Conda environment
-RUN conda env create -f environment.yml
+# Ensure Conda is initialized and create the environment
+RUN conda init bash && conda env create -f environment.yml
 
-# Activate the environment
-SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
+# Activate the environment in every new shell
+RUN echo "conda activate myenv" >> ~/.bashrc
 
 # Copy the rest of the application
 COPY . .
 
-# Expose the port (Django default is 8000, change if needed)
+# Expose the application port (default Django port is 8000)
 EXPOSE 8000
 
-# Start the application using Gunicorn inside Conda environment
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "pixel-classes.wsgi:application"]
+# Start the application using Gunicorn with the Conda environment
+CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "gunicorn", "--bind", "0.0.0.0:8000", "pixel-classes.wsgi:application"]
