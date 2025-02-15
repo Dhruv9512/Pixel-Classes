@@ -1,29 +1,29 @@
-# Use Miniconda as the base image
+# Use the official Miniconda3 image
 FROM continuumio/miniconda3
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy the environment.yml file to the container
+# Copy environment.yml file to the container
 COPY environment.yml .
 
-# Create the Conda environment
+# Create Conda environment
 RUN conda env create -f environment.yml
 
-# Activate the Conda environment by default
+# Set up Conda environment activation
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Set PATH for Conda environment
-ENV PATH /opt/conda/envs/myenv/bin:$PATH
-
-# Copy the project files
+# Copy all project files into the container
 COPY . .
 
-# Expose port 8000 for the web app
+# Activate environment and install additional dependencies if needed
+RUN pip install --upgrade pip
+
+# Expose port 8000 for the web application
 EXPOSE 8000
 
-# Run migrations (if using Django)
-RUN python manage.py migrate || true  # Ignore errors if Django is not used
+# Run Django migrations (only if using Django)
+RUN python manage.py migrate || true
 
-# Start the web application (Change "app:app" for Flask or "your_project.wsgi" for Django)
+# Start the web server (Flask or Django)
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
