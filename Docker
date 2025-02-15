@@ -1,7 +1,7 @@
-# Use the official Miniconda image
+# Use Miniconda as the base image
 FROM continuumio/miniconda3
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
 # Copy the environment file
@@ -10,9 +10,9 @@ COPY environment.yml .
 # Create the Conda environment
 RUN conda env create -f environment.yml
 
-# Activate environment and set as default
-RUN echo "source activate myenv" > ~/.bashrc
+# Set the default environment
 ENV PATH /opt/conda/envs/myenv/bin:$PATH
+ENV CONDA_DEFAULT_ENV myenv
 
 # Copy the rest of the app
 COPY . .
@@ -20,5 +20,5 @@ COPY . .
 # Expose the port (update if your app uses a different port)
 EXPOSE 8000
 
-# Command to run the app
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "your_project_name.wsgi:application"]
+# Start the application using Gunicorn inside Conda environment
+CMD ["conda", "run", "-n", "myenv", "gunicorn", "--bind", "0.0.0.0:8000", "pixel-classes.wsgi:application"]
