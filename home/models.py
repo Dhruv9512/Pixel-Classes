@@ -7,7 +7,8 @@ from django.db import models
 class CourseList(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255 , unique=True , null=False)
-    def _str_(self):
+    number_sem = models.IntegerField(null=False)
+    def __str__(self):
         return self.name
     
 # model of QuePdf
