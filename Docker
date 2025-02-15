@@ -1,7 +1,7 @@
 # Use Miniconda as the base image
 FROM continuumio/miniconda3
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
 # Copy the environment.yml file
@@ -10,27 +10,20 @@ COPY environment.yml .
 # Create the Conda environment
 RUN conda env create -f environment.yml
 
-# Activate the environment and set the path
-RUN echo "source activate myenv" > ~/.bashrc
+# Set default shell to use Conda environment
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
+
+# Set PATH for Conda environment
 ENV PATH /opt/conda/envs/myenv/bin:$PATH
 
-# Copy the rest of the application files
+# Copy the project files
 COPY . .
 
-# Upgrade pip inside the Conda environment
-RUN conda run -n myenv python -m pip install --upgrade pip
+# Run migrations (for Django projects)
+RUN python manage.py migrate || true  # Ignore errors if Django is not used
 
-# Install additional dependencies
-RUN conda run -n myenv pip install -r requirements.txt
-
-# Run Django migrations
-RUN conda run -n myenv python manage.py migrate
-
-# Expose port (Django default: 8000)
+# Expose port 8000 for the web app
 EXPOSE 8000
 
-# Start the application (Django)
-CMD ["conda", "run", "-n", "myenv", "gunicorn", "--bind", "0.0.0.0:8000", "myapp.wsgi:application"]
-
-# For Flask, replace CMD with:
-# CMD ["conda", "run", "-n", "myenv", "gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
+# Start the server (Flask/Django)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]  # Change to `your_project.wsgi` for Django
