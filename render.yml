@@ -3,7 +3,7 @@ services:
     name: myapp
     env: docker
     plan: free
-    repo: https://github.com/Dhruv9512/Pixel-Classes
+    repo: https://github.com/Dhruv9512/YourRepoName
     region: oregon
     dockerfilePath: ./Dockerfile
     envVars:

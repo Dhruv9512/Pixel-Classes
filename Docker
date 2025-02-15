@@ -5,23 +5,28 @@ FROM continuumio/miniconda3
 WORKDIR /app
 
 # Copy the environment.yml file
-COPY environment.yml /app/environment.yml
+COPY environment.yml .
 
-# Install dependencies using Conda
+# Create the Conda environment
 RUN conda env create -f environment.yml
 
-# Activate the environment
+# Activate the environment and set the path
 RUN echo "source activate myenv" > ~/.bashrc
 ENV PATH /opt/conda/envs/myenv/bin:$PATH
 
-# Copy the entire project
-COPY . /app
+# Copy the rest of the application files
+COPY . .
 
-# Install additional dependencies if needed
+# Upgrade pip inside the Conda environment
 RUN conda run -n myenv python -m pip install --upgrade pip
+
+# Install additional dependencies
 RUN conda run -n myenv pip install -r requirements.txt
 
-# Expose the port (default for Django/Flask)
+# Run Django migrations
+RUN conda run -n myenv python manage.py migrate
+
+# Expose port (Django default: 8000)
 EXPOSE 8000
 
 # Start the application (Django)
