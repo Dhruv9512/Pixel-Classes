@@ -6,10 +6,10 @@ from .models import CourseList , QuePdf
 class CourseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseList
-        fields = ['id', 'name']  # specify the fields to include in the response
+        fields = ['id', 'name']  
 
 # QuePdf serializer
 class QuePdfSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuePdf
-        fields = ['id', 'course', 'pdf', 'sem', 'name'] 
+        fields = ['id', 'course', 'pdf', 'sem','div','year'] 
