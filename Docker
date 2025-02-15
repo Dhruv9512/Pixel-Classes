@@ -4,8 +4,8 @@ FROM continuumio/miniconda3
 # Set the working directory
 WORKDIR /app
 
-# Copy environment.yml
-COPY environment.yml /app/environment.yml
+# Copy environment.yml and requirements.txt
+COPY environment.yml requirements.txt /app/
 
 # Install required system dependencies for MySQL
 RUN apt-get update && apt-get install -y \
@@ -15,20 +15,20 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Initialize conda and create the environment
-RUN conda init bash && conda env create -f environment.yml
+# Create the Conda environment and ensure it's activated in the shell
+RUN conda env create -f environment.yml && conda clean --all -y
 
-# Activate the environment
+# Change the default shell to use Conda
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Copy the application code
+# Install additional Python dependencies (if required)
+RUN conda run -n myenv pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
 COPY . /app
 
-# Install Python dependencies
-RUN pip install -r requirements.txt
-
-# Expose the port your app runs on
+# Expose the port the application runs on
 EXPOSE 5000
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Set the command to run the application inside the Conda environment
+CMD ["conda", "run", "-n", "myenv", "python", "app.py"]
