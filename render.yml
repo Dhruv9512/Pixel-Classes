@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: myapp
+    env: docker
+    plan: free
+    repo: https://github.com/Dhruv9512/Pixel-Classes
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+    autoDeploy: true
