@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: my-web-app
+    name: pixel-classes
     env: docker
     plan: free
     dockerfilePath: ./Dockerfile

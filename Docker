@@ -4,7 +4,7 @@ FROM continuumio/miniconda3
 # Set working directory
 WORKDIR /app
 
-# Copy the environment.yml file
+# Copy the environment.yml file to the container
 COPY environment.yml .
 
 # Create the Conda environment
@@ -25,5 +25,5 @@ EXPOSE 8000
 # Run migrations (if using Django)
 RUN python manage.py migrate || true  # Ignore errors if Django is not used
 
-# Start the web application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]  # Change "app:app" to "your_project.wsgi" for Django
+# Start the web application (Change "app:app" for Flask or "your_project.wsgi" for Django)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
