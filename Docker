@@ -1,4 +1,4 @@
-# Use an official Python image
+# Use Miniconda as the base image
 FROM continuumio/miniconda3
 
 # Set the working directory
@@ -7,11 +7,11 @@ WORKDIR /app
 # Copy environment.yml
 COPY environment.yml /app/environment.yml
 
-# Install system dependencies for mysqlclient
+# Install required system dependencies for MySQL
 RUN apt-get update && apt-get install -y \
     pkg-config \
-    libmysqlclient-dev \
-    default-libmysqlclient-dev \
+    libmariadb-dev \
+    libmariadb-dev-compat \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
