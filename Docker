@@ -1,13 +1,13 @@
 # Use Miniconda as the base image
 FROM continuumio/miniconda3
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy environment.yml
+# Copy environment.yml into the container
 COPY environment.yml /app/
 
-# Install required system dependencies for MySQL
+# Install system dependencies needed for MySQL (or MariaDB)
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libmariadb-dev \
@@ -15,20 +15,20 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create the Conda environment from environment.yml
+# Create the Conda environment from the environment.yml file
 RUN conda env create -f /app/environment.yml
 
-# Activate the environment
+# Activate the Conda environment in subsequent commands
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Install additional dependencies for Django if needed (like gunicorn)
+# Install Gunicorn, a WSGI server for running Django in production
 RUN pip install gunicorn
 
-# Copy the application code (make sure the Django project code is in the current directory)
+# Copy the application code (ensure your Django project code is in the current directory)
 COPY . /app/
 
 # Expose the port Django runs on (usually 8000 in development)
 EXPOSE 8000
 
-# Command to run the Django development server
-CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Command to run the Django app using Gunicorn in production
+CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:8000"]
