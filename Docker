@@ -32,4 +32,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Command to run the Django app using Gunicorn in production
-CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "gunicorn", "Pixel-Classes.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["conda", "run", "--no-capture-output", "-n", "myenv", "gunicorn", "Pixel.wsgi:application", "--bind", "0.0.0.0:8000"]
