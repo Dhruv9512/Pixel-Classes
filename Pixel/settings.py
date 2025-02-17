@@ -18,6 +18,8 @@ ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1', 
     'pixelclass.netlify.app',  # Updated to not include full URL 'http://localhost:5173'
+    'localhost:5175',
+    'localhost:5174', 
 ]
 
 # Installed Apps
