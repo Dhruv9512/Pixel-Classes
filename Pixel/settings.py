@@ -129,6 +129,8 @@ CORS_ALLOWED_ORIGINS = [
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
+    'http://localhost:5175',  # Frontend in development
+    'http://localhost:5174',
     'https://pixelclass.netlify.app',
 ]
 
