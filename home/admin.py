@@ -5,7 +5,7 @@ from .models import CourseList , QuePdf
 # Registering the model CourseList
 @admin.register(CourseList)
 class CourseListAdmin(admin.ModelAdmin):
-    list_display = ('id','name')
+    list_display = ('id','name','number_sem')
 
 # Registering the model QuePdf
 @admin.register(QuePdf)
