@@ -37,3 +37,8 @@ class QuePdf(models.Model):
 
     def __str__(self):
         return f"{self.course} - Sem {self.sem} - {self.div} - Year {self.year} - {self.name}"
+    
+class AnsPdf(models.Model):
+    name = models.CharField(max_length=255, null=False)
+    contant = models.TextField(null=False)
+    pdf = models.URLField(max_length=255, null=False)

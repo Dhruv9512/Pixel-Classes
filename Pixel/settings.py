@@ -120,6 +120,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5175',  # Frontend in development
+    'http://localhost:5174',  # Frontend in development
     'http://localhost:5173',  # Frontend in development
     'https://pixel-classes.onrender.com',  # Frontend hosted on Render
     'https://pixelclass.netlify.app',  # Frontend hosted on Netlify
