@@ -79,27 +79,28 @@ class AnsPdfUploadView(APIView):
 
     def upload_pdf_to_vercel(self, pdf_file):
         try:
-            # Vercel Blob Upload Endpoint (make sure this is the correct URL)
-            upload_endpoint = "https://api.vercel.com/v2/blob/upload"  # Update with actual endpoint
+            # Step 1: Get an actual upload URL from Vercel API
+            get_upload_url = "https://api.vercel.com/v2/blob/upload"
             headers = {
-                'Authorization': f"Bearer {os.environ.get('BLOB_TOKEN')}",  # Ensure the token is set in environment variables
+                'Authorization': f"Bearer {os.environ.get('BLOB_TOKEN')}",
+                'Content-Type': 'application/json',
             }
 
-            # Make the upload request to the storage service (Vercel or other service)
-            response = requests.post(
-                upload_endpoint,
-                files={'file': pdf_file},  # Ensure you're passing the file correctly
-                headers=headers
-            )
+            response = requests.post(get_upload_url, headers=headers)
+            if response.status_code != 200:
+                raise ValidationError(f"Failed to get upload URL: {response.text}")
 
-            # Check for a successful response (status code 200)
-            if response.status_code == 200:
-                # Return the URL of the uploaded file from the response
-                return response.json().get("url")
+            upload_url = response.json().get("url")
+            print("Actual Upload URL:", upload_url)  # Debugging
+
+            # Step 2: Upload file to the received URL
+            files = {'file': pdf_file}
+            upload_response = requests.put(upload_url, files=files)
+
+            if upload_response.status_code == 200:
+                return upload_response.json().get("url")  # The final file URL
             else:
-                # Raise an error if the status code is not 200
-                raise ValidationError(f"File upload failed with status code: {response.status_code}, {response.text}")
+                raise ValidationError(f"File upload failed: {upload_response.text}")
 
         except Exception as e:
-            # Catch any exceptions and raise an error with the exception message
-            raise ValidationError(f"An error occurred while uploading the file: {str(e)}")
+            raise ValidationError(f"Error while uploading file: {str(e)}")
