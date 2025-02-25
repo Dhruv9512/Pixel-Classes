@@ -80,7 +80,7 @@ class AnsPdfUploadView(APIView):
     def upload_pdf_to_vercel(self, pdf_file):
         try:
             # Vercel Blob Upload Endpoint (make sure this is the correct URL)
-            upload_endpoint = "https://your-vercel-blob-upload-endpoint.com"  # Update with actual endpoint
+            upload_endpoint = "https://api.vercel.com/v2/blob/upload"  # Update with actual endpoint
             headers = {
                 'Authorization': f"Bearer {os.environ.get('BLOB_TOKEN')}",  # Ensure the token is set in environment variables
             }
