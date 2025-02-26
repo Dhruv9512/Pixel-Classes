@@ -79,7 +79,7 @@ class AnsPdfUploadView(APIView):
 
     def upload_pdf_to_vercel(self, pdf_file):
         try:
-            # Step 1: Get an actual upload URL from Vercel API
+            print("🔹 Getting Vercel upload URL...")  # Debugging
             get_upload_url = "https://api.vercel.com/v2/blob/upload"
             headers = {
                 'Authorization': f"Bearer {os.environ.get('BLOB_TOKEN')}",
@@ -87,15 +87,18 @@ class AnsPdfUploadView(APIView):
             }
 
             response = requests.post(get_upload_url, headers=headers)
+            print("🔹 Response from Vercel (Step 1):", response.text)  # Debugging
+
             if response.status_code != 200:
                 raise ValidationError(f"Failed to get upload URL: {response.text}")
 
             upload_url = response.json().get("url")
-            print("Actual Upload URL:", upload_url)  # Debugging
+            print("🔹 Actual Upload URL:", upload_url)  # Debugging
 
             # Step 2: Upload file to the received URL
             files = {'file': pdf_file}
             upload_response = requests.put(upload_url, files=files)
+            print("🔹 Response from Vercel (Step 2):", upload_response.text)  # Debugging
 
             if upload_response.status_code == 200:
                 return upload_response.json().get("url")  # The final file URL
@@ -103,4 +106,6 @@ class AnsPdfUploadView(APIView):
                 raise ValidationError(f"File upload failed: {upload_response.text}")
 
         except Exception as e:
+            print("❌ Upload Error:", str(e))  # Debugging
             raise ValidationError(f"Error while uploading file: {str(e)}")
+
