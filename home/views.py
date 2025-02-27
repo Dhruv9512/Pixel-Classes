@@ -51,28 +51,27 @@ class QuePdfView(APIView):
 
 
 class AnsPdfUploadView(APIView):
-    parser_classes = (MultiPartParser, FormParser)  # For handling file uploads
+    parser_classes = (MultiPartParser, FormParser)  # Handles file uploads
 
     def post(self, request):
         try:
             # Retrieve data from request
             name = request.data.get('name')
             content = request.data.get('content')
-            pdf_file = request.FILES.get('pdf')  # PDF file uploaded by the user
+            pdf_file = request.FILES.get('pdf')  # Get uploaded PDF file
 
-            # Step 3: Upload file to cloud storage
-            if pdf_file:
-                url = self.upload_pdf_to_vercel(pdf_file)
-
-                # Save the data in the database
-                ans_pdf = AnsPdf.objects.create(name=name, content=content, pdf=url)
-
-                # Serialize the response
-                serializer = AnsPdfSerializer(ans_pdf)
-
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
+            if not pdf_file:
                 return Response({"error": "No PDF file provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Upload the PDF file to Vercel
+            file_url = self.upload_pdf_to_vercel(pdf_file)
+
+            # Save the uploaded file details in the database
+            ans_pdf = AnsPdf.objects.create(name=name, content=content, pdf=file_url)
+
+            # Serialize response
+            serializer = AnsPdfSerializer(ans_pdf)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -80,32 +79,41 @@ class AnsPdfUploadView(APIView):
     def upload_pdf_to_vercel(self, pdf_file):
         try:
             print("🔹 Getting Vercel upload URL...")  # Debugging
-            get_upload_url = "https://api.vercel.com/v2/blob/upload"
+            
+            # Step 1: Get an upload URL from Vercel
+            get_upload_url = "https://blob.vercel-storage.com/upload"
             headers = {
                 'Authorization': f"Bearer {os.environ.get('BLOB_TOKEN')}",
                 'Content-Type': 'application/json',
             }
+            json_payload = {"filename": pdf_file.name}
 
-            response = requests.post(get_upload_url, headers=headers)
+            response = requests.post(get_upload_url, json=json_payload, headers=headers)
             print("🔹 Response from Vercel (Step 1):", response.text)  # Debugging
 
             if response.status_code != 200:
                 raise ValidationError(f"Failed to get upload URL: {response.text}")
 
-            upload_url = response.json().get("url")
+            # Extract upload URL and headers
+            data = response.json()
+            upload_url = data.get("url")
+            upload_headers = data.get("headers")
+
+            if not upload_url or not upload_headers:
+                raise ValidationError("Invalid response from Vercel, missing 'url' or 'headers'.")
+
             print("🔹 Actual Upload URL:", upload_url)  # Debugging
 
-            # Step 2: Upload file to the received URL
-            files = {'file': pdf_file}
-            upload_response = requests.put(upload_url, files=files)
+            # Step 2: Upload the file to Vercel
+            pdf_content = pdf_file.read()  # Read file content once
+            upload_response = requests.put(upload_url, data=pdf_content, headers=upload_headers)
             print("🔹 Response from Vercel (Step 2):", upload_response.text)  # Debugging
 
             if upload_response.status_code == 200:
-                return upload_response.json().get("url")  # The final file URL
+                return upload_url  # Return final file URL
             else:
                 raise ValidationError(f"File upload failed: {upload_response.text}")
 
         except Exception as e:
             print("❌ Upload Error:", str(e))  # Debugging
             raise ValidationError(f"Error while uploading file: {str(e)}")
-
