@@ -103,3 +103,19 @@ class AnsPdfUploadView(APIView):
             print(f"❌ General Error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# ✅ AnsPdf View (Fixed to GET)
+@method_decorator(csrf_exempt, name="dispatch")
+class AnsPdfView(APIView):
+    def post(self, request):
+        try:
+            id = request.data.get("id")
+            queryset = AnsPdf.objects.filter(que_pdf=id)
+            serializer = AnsPdfSerializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
