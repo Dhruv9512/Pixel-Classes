@@ -99,7 +99,7 @@ class LoginView(APIView):
 
                 # Verify the password
                 if not authenticate(username=username, password=password):
-                    return Response({"error": "Invalid Password"}, status=status.HTTP_401_UNAUTHORIZED)
+                    return Response({"error": "You are not verified , please try to signup after 1 minute"}, status=status.HTTP_401_UNAUTHORIZED)
 
                 # Send email verification for login
                 send_mail_for_login(user)
@@ -340,3 +340,27 @@ class PasswordResetStatusView(APIView):
                 {"error": f"An unexpected error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+# DeleteNONVerifiedUsers
+class DeleteNONVerifiedUsers(APIView):
+    def get(self, request):
+        try:
+            # Delete expired tokens
+            expired_tokens = PasswordResetToken.objects.filter(expiry_date__lt=timezone.now())
+            count_tokens = expired_tokens.count()
+            expired_tokens.delete()
+            logger.info(f"Deleted {count_tokens} expired tokens.")
+        except Exception as e:
+            logger.error(f"Error deleting expired tokens: {e}")
+            return Response({"error": "Failed to delete expired tokens."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            # Delete non-verified users (ensure filtering is strict enough)
+            users = User.objects.filter(is_active=False, last_login__isnull=True)
+            count_users = users.count()
+            users.delete()
+            logger.info(f"Deleted {count_users} non-verified users.")
+            return Response({"message": "Non-verified users deleted successfully."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error deleting non-verified users: {e}")
+            return Response({"error": "Failed to delete non-verified users."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
