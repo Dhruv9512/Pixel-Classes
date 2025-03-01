@@ -5,6 +5,11 @@ from decouple import config
 import os
 from datetime import timedelta
 import dj_database_url
+from dotenv import load_dotenv
+
+load_dotenv() 
+
+VERCEL_BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
 # Base directory setup
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,7 +24,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1', 
     'pixelclass.netlify.app',  # Updated to not include full URL 'http://localhost:5173'
     'localhost:5175',
-    'localhost:5174', 
+    'localhost:5174',
+    'localhost:5173', 
 ]
 
 # Installed Apps

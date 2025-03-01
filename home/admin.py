@@ -15,4 +15,4 @@ class QuePdfAdmin(admin.ModelAdmin):
 # Registering the model AnsPdf
 @admin.register(AnsPdf)
 class AnsPdfAdmin(admin.ModelAdmin):
-    list_display = ('name', 'contant', 'pdf')
+    list_display = ('que_pdf', 'name', 'contant', 'pdf')

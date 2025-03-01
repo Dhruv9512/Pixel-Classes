@@ -1,24 +1,27 @@
 from rest_framework.response import Response
-from .models import CourseList , QuePdf , AnsPdf
+from .models import CourseList, QuePdf, AnsPdf
 from rest_framework.views import APIView
 from django.views.decorators.csrf import csrf_exempt
-from .serializers import CourseListSerializer , QuePdfSerializer , AnsPdfSerializer
+from .serializers import CourseListSerializer, QuePdfSerializer, AnsPdfSerializer
 from rest_framework import status
-import requests
-from rest_framework.parsers import MultiPartParser, FormParser
 import os
-from django.core.exceptions import ValidationError
+from django.utils.decorators import method_decorator
+from vercel_blob import put
+from rest_framework.parsers import MultiPartParser, FormParser
+from dotenv import load_dotenv
 
-# Create your views here.
-class coursesView(APIView):
-    @csrf_exempt
+# Load environment variables
+load_dotenv()
+
+# ✅ Course List View
+@method_decorator(csrf_exempt, name="dispatch")
+class CoursesView(APIView):
     def get(self, request):
         try:
-            course_lists = CourseList.objects.all()  # Get all CourseList objects
+            course_lists = CourseList.objects.all()
             if not course_lists:
                 return Response({'message': 'No course lists found.'}, status=404)
 
-            # Use the serializer to convert queryset into JSON
             serializer = CourseListSerializer(course_lists, many=True)
             return Response({'CourseList': serializer.data}, status=200)
 
@@ -26,106 +29,77 @@ class coursesView(APIView):
             return Response({'error': str(e)}, status=500)
 
 
-# Create QuePdfView here
+# ✅ QuePdf View (Fixed to GET)
+@method_decorator(csrf_exempt, name="dispatch")
 class QuePdfView(APIView):
-    @csrf_exempt
-    def post(self, request):
+    def get(self, request):
         try:
-            # Fetch all QuePdf records
             queryset = QuePdf.objects.all()
-
-            # Serialize the queryset
             serializer = QuePdfSerializer(queryset, many=True)
-
-            # Return serialized data as JSON
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            # Handle any errors that occur during the process
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
-# Create AnsPdfUploadView here
+# ✅ AnsPdf Upload View (File Upload Handling)
+load_dotenv()
+
+@method_decorator(csrf_exempt, name="dispatch")
 class AnsPdfUploadView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
-    @csrf_exempt
-    
+    parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
+
     def post(self, request):
         try:
-            # Retrieve data from request
+            print("\n🔍 Debugging: Received POST request")
+
+            # ✅ Extract Data from Request
             name = request.data.get("name")
             content = request.data.get("content")
-            pdf_file = request.FILES.get("pdf")
+            file = request.FILES.get("pdf")  # Get the uploaded file
+            id = request.data.get("id")
+            que_pdf_id = QuePdf.objects.get(id=id)
+            # Debugging logs for input data
+            print(f"📌 Name: {name}")
+            print(f"📌 Content: {content}")
 
-            if not pdf_file:
-                return Response({"error": "No PDF file provided."}, status=status.HTTP_400_BAD_REQUEST)
+            if not file:
+                print("❌ No file uploaded!")
+                return Response({"error": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Upload the PDF file to Vercel
-            file_url = self.upload_pdf_to_vercel(pdf_file)
+            print(f"✅ File received: {file.name} ({file.size} bytes)")
 
-            # Save to database
-            ans_pdf = AnsPdf.objects.create(name=name, content=content, pdf=file_url)
+            # ✅ Get Vercel Blob Token
+            token = os.getenv("BLOB_READ_WRITE_TOKEN")
+            print(f"BLOB_TOKEN: {os.getenv('BLOB_READ_WRITE_TOKEN')}")
+            if not token:
+                print("❌ ERROR: Vercel Blob token is missing!")
+                return Response(
+                    {"error": "Vercel Blob token is missing. Please check your environment variables."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            # Serialize response
+            print("🔄 Uploading file to Vercel Blob...")
+
+            # ✅ Upload to Vercel Blob
+            try:
+                blob = put(f"AnsPdf/{file.name}", file.read())
+                print(f"✅ File uploaded successfully: {blob["url"]}")
+            except Exception as upload_error:
+                print(f"❌ Upload error: {upload_error}")
+                return Response({"error": f"Upload failed: {str(upload_error)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # ✅ Save to Database
+            ans_pdf = AnsPdf.objects.create(que_pdf=que_pdf_id, name=name, contant=content, pdf=blob["url"])
+            print("✅ File record saved in the database!")
+
             serializer = AnsPdfSerializer(ans_pdf)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            print("❌ Internal Server Error:", str(e))  # Debugging
+            print(f"❌ General Error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def upload_pdf_to_vercel(self, pdf_file):
-        try:
-            print("🔹 Getting Vercel upload URL...")
-
-            # Check if BLOB_TOKEN is set
-            blob_token = os.environ.get("BLOB_TOKEN")
-            if not blob_token:
-                raise ValidationError("BLOB_TOKEN is missing!")
-
-            # Step 1: Get an upload URL from Vercel
-            get_upload_url = "https://blob.vercel-storage.com/upload"
-            headers = {
-                "Authorization": f"Bearer {blob_token}",
-                "Content-Type": "application/json",
-            }
-            json_payload = {"filename": pdf_file.name}
-
-            response = requests.post(get_upload_url, json=json_payload, headers=headers)
-            print("🔹 Response from Vercel (Step 1):", response.status_code, response.text)
-
-            if response.status_code != 200:
-                raise ValidationError(f"Failed to get upload URL: {response.text}")
-
-            # Extract upload URL
-            data = response.json()
-            upload_url = data.get("url")
-            upload_headers = data.get("headers")
-
-            if not upload_url or not upload_headers:
-                raise ValidationError("Invalid response from Vercel, missing 'url' or 'headers'.")
-
-            print("🔹 Actual Upload URL:", upload_url)
-
-            # Step 2: Upload the file to Vercel
-            pdf_content = pdf_file.read()
-            if not pdf_content:
-                raise ValidationError("Error: File content is empty!")
-
-            print("🔹 File Size:", len(pdf_content))
-
-            upload_response = requests.put(upload_url, data=pdf_content, headers=upload_headers)
-            print("🔹 Response from Vercel (Step 2):", upload_response.status_code, upload_response.text)
-
-            if upload_response.status_code == 200:
-                return upload_url
-            else:
-                raise ValidationError(f"File upload failed: {upload_response.text}")
-
-        except Exception as e:
-            print("❌ Upload Error:", str(e))
-            raise ValidationError(f"Error while uploading file: {str(e)}")
 

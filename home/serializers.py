@@ -18,5 +18,5 @@ class QuePdfSerializer(serializers.ModelSerializer):
 class AnsPdfSerializer(serializers.ModelSerializer): 
     class Meta:
         model = AnsPdf
-        fields = ['name', 'contant', 'pdf']
+        fields = ['que_pdf', 'name', 'contant', 'pdf']
         fields = '__all__'
