@@ -99,7 +99,7 @@ class LoginView(APIView):
 
                 # Verify the password
                 if not authenticate(username=username, password=password):
-                    return Response({"error": "You are not verified , please try to signup after 1 minute"}, status=status.HTTP_401_UNAUTHORIZED)
+                    return Response({"error": "You are not verified, please try to sign up tomorrow or after we send an email."}, status=status.HTTP_401_UNAUTHORIZED)
 
                 # Send email verification for login
                 send_mail_for_login(user)
