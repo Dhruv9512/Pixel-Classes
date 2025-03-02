@@ -91,37 +91,39 @@ class LoginView(APIView):
                 username = serializer.validated_data['username']
                 password = serializer.validated_data['password']
                 
-                # First, check if the user exists by verifying the username
-                try:
-                    user = User.objects.get(username=username)
-                except User.DoesNotExist:
-                    return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
+            # Check if the username exists
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-                # Verify the password
-                if not authenticate(username=username, password=password):
-                    return Response({"error": "You are not verified, please try to sign up tomorrow or after we send an email."}, status=status.HTTP_401_UNAUTHORIZED)
+            # Check if the password is correct
+            user_auth = authenticate(username=username, password=password)
+            if user_auth is None:
+                return Response({"error": "Incorrect password. Please try again."}, status=status.HTTP_401_UNAUTHORIZED)
 
-                # Send email verification for login
-                send_mail_for_login(user)
+            # Check if the user is inactive
+            if not user_auth.is_active:
+                return Response({"error": "You are not verified, please try to sign up tomorrow or wait for our email."}, status=status.HTTP_403_FORBIDDEN)
+         
+            # Send email verification for login
+            send_mail_for_login(user)
 
-                refresh = RefreshToken.for_user(user)
-                access_token = refresh.access_token
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
 
-                login(request, user)
+            login(request, user)
 
-                response_data = {
-                    "message": "Login successful!",
-                    "access_token": str(access_token),
-                    "refresh_token": str(refresh),
-                }
-                response = Response(response_data, status=status.HTTP_200_OK)
-                response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-                response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-                logger.info(f"User {user.username} logged in successfully")
-                return response
-            logger.error(f"Serializer error: {serializer.errors}")
-            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-        
+            response_data = {
+                "message": "Login successful!",
+                "access_token": str(access_token),
+                "refresh_token": str(refresh),
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            logger.info(f"User {user.username} logged in successfully")
+            return response
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
