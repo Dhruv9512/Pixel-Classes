@@ -17,26 +17,13 @@ from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from .models import PasswordResetToken 
 from django.utils.timezone import now
-import schedule
 from django.utils import timezone
 
-def health_check():
-    try:
-        # Directly query for expired tokens instead of fetching all tokens
-        expired_tokens = PasswordResetToken.objects.filter(expiry_date__lt=timezone.now())
-    
-        # Delete the expired tokens in bulk to reduce database hits
-        expired_tokens.delete()
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-schedule.every(1).hour.do(health_check)
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 # OTP Verification View
-
 class VerifyOTPView(APIView):
     @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
@@ -55,6 +42,7 @@ class VerifyOTPView(APIView):
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
+
         # Fetch user from the database by username
         try:
             user = User.objects.get(username=username)
@@ -74,7 +62,24 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
             logger.info(f"Account activated successfully for user: {user.username}")
-            return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
+            # Send email verification for login
+            send_mail_for_login(user)
+
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            login(request, user)
+
+            response_data = {
+                "message": "Login successful!",
+                "access_token": str(access_token),
+                "refresh_token": str(refresh),
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            logger.info(f"User {user.username} logged in successfully")
+            return response
         else:
             logger.warning(f"Invalid OTP entered for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
@@ -284,7 +289,7 @@ class SubmitNewPasswordView(APIView):
             token.save()
 
             # (Optional) Send a password reset confirmation email
-            # send_password_reset_confirmation(user)
+            send_password_reset_confirmation(user)
 
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
