@@ -145,20 +145,3 @@ def send_password_reset_confirmation(user):
         logger.info(f"Sent password reset email to {user.email}")
     except Exception as e:
         logger.error(f"Error sending password reset email to {user.email}: {str(e)}")
-
-
-
-# Path: user/signals.py
-User = get_user_model()  
-
-@receiver(post_save, sender=AnsPdf)
-def send_email_notification(sender, instance, created, **kwargs):
-    if created:  # If a new row is created in the AnsPdf table
-        subject = "New PDF Uploaded!"
-        message = f"A new PDF has been uploaded: {instance}\nCheck it out now!"
-        
-        
-        # recipients = list(User.objects.filter(is_active=True).values_list('email', flat=True))
-        recipients = ['dhruvsharma56780@gmail.com']
-        if recipients: 
-            send_mail(subject, message, settings.EMAIL_HOST_USER, recipients)
