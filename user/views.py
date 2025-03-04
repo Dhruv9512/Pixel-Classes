@@ -18,7 +18,7 @@ from django.shortcuts import HttpResponseRedirect
 from .models import PasswordResetToken 
 from django.utils.timezone import now
 from django.utils import timezone
-
+import time
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -42,11 +42,14 @@ class VerifyOTPView(APIView):
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
-
         # Fetch user from the database by username
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
+        for _ in range(3):  # Retry fetching in case of a delay
+            try:
+                user = User.objects.get(username=username)
+                break
+            except User.DoesNotExist:
+                time.sleep(0.5)  
+        else:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         # Retrieve the stored OTP from cache
@@ -83,6 +86,7 @@ class VerifyOTPView(APIView):
         else:
             logger.warning(f"Invalid OTP entered for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
+
 
 # Login View
 class LoginView(APIView):
