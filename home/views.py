@@ -1,8 +1,8 @@
 from rest_framework.response import Response
-from .models import CourseList, QuePdf, AnsPdf
+from .models import CourseList, QuePdf, AnsPdf , Subject
 from rest_framework.views import APIView
 from django.views.decorators.csrf import csrf_exempt
-from .serializers import CourseListSerializer, QuePdfSerializer, AnsPdfSerializer
+from .serializers import CourseListSerializer, QuePdfSerializer, AnsPdfSerializer , SubjectSerializer
 from rest_framework import status
 import os
 from django.utils.decorators import method_decorator
@@ -71,7 +71,24 @@ class QuePdfSubView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+# Get all subject
+@method_decorator(csrf_exempt, name="dispatch")
+class QuePdfGetSubView(APIView):
+    def post(self, request):
+        try:
+            course_name = request.data.get("course_name")  
+            sem = request.data.get("sem")
+            
+            # Extrsct Subject sub from QuePdf model as par course_name and sem
+            queryset = Subject.objects.filter(course_obj__name=course_name , sem=sem).distinct()
+            serializer = SubjectSerializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 # ✅ AnsPdf Upload View (File Upload Handling)
 load_dotenv()
 

@@ -43,3 +43,15 @@ class AnsPdf(models.Model):
     name = models.CharField(max_length=255, null=False)
     contant = models.TextField(null=False)
     pdf = models.URLField(max_length=255, null=False)
+
+
+# Model for subject name
+class Subject(models.Model):
+
+    id = models.AutoField(primary_key=True)
+    sem = models.IntegerField(null=False)
+    course_obj = models.ForeignKey(CourseList, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name

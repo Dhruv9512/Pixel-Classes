@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CourseList , QuePdf , AnsPdf
+from .models import CourseList , QuePdf , AnsPdf , Subject
 
 
 # course list serializer
@@ -20,3 +20,9 @@ class AnsPdfSerializer(serializers.ModelSerializer):
         model = AnsPdf
         fields = ['que_pdf', 'name', 'contant', 'pdf']
         fields = '__all__'
+
+# Subject serializer
+class SubjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subject
+        fields = ['id', 'name' , 'sem']
