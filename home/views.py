@@ -44,6 +44,33 @@ class QuePdfView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+# QuePdf View Subject vise
+@method_decorator(csrf_exempt, name="dispatch")
+class QuePdfSubView(APIView):
+    def post(self, request):
+        try:
+            sub = request.data.get("sub")
+            course_name = request.data.get("course_name")  
+
+            # Extract course_id from CourseList model
+            course = CourseList.objects.filter(name=course_name).first()
+            if not course:
+                return Response({"error": "Invalid course name"}, status=status.HTTP_400_BAD_REQUEST)
+
+            course_id = course.id  
+
+            # Filter using both sub and course_id
+            queryset = QuePdf.objects.filter(sub=sub, course_id=course_id).all()  
+            serializer = QuePdfSerializer(queryset, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 # ✅ AnsPdf Upload View (File Upload Handling)
 load_dotenv()
