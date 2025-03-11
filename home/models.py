@@ -27,7 +27,7 @@ class QuePdf(models.Model):
     sem = models.IntegerField(null=False)
     div = models.CharField(max_length=10, null=False)
     year = models.IntegerField(null=False)
-    
+    sub = models.CharField(max_length=10, null=False)
     # Store date and time as strings
     dateCreated = models.CharField(max_length=10, default=get_current_date)  # Format: YYYY-MM-DD
     timeCreated = models.CharField(max_length=8, default=get_current_time)   # Format: HH:MM:SS
