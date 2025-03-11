@@ -12,7 +12,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 class QuePdfSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuePdf
-        fields = ['id', 'course', 'pdf', 'sem', 'dateCreated', 'timeCreated', 'name' , 'div' , 'year']
+        fields = ['id', 'course', 'pdf', 'sem', 'dateCreated', 'timeCreated', 'name' , 'div' , 'year' , 'sub']
 
 # AnsPdf serializer
 class AnsPdfSerializer(serializers.ModelSerializer): 
