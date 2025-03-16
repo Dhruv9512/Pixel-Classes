@@ -160,13 +160,13 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-          
-        pf = profileSerializer(data={**request.data, "user_obj": user}) 
-        if pf.is_valid():
-            pf.save()
+            # set profile details
+            pf = profileSerializer(data={**request.data, "user_obj": user}) 
+            if pf.is_valid():
+                pf.save()
 
             
-
+            # setting cookies
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
             response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
             response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')

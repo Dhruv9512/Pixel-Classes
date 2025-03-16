@@ -2,10 +2,12 @@ from django.db import models
 from datetime import datetime
 import requests
 from django.contrib.auth.models import User
+import pytz
 
 # Function to return the current time as a string in HH:MM:SS format
 def get_current_time():
-    return datetime.now().strftime("%H:%M:%S")
+    ist = pytz.timezone('Asia/Kolkata')  
+    return datetime.now(ist).strftime("%I:%M %p") # 12-hour format with AM/PM
 
 # Function to return the current date as a string in YYYY-MM-DD format
 def get_current_date():
