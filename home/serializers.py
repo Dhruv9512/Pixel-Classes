@@ -35,3 +35,7 @@ class profileSerializer(serializers.ModelSerializer):
         model = profile
         fields = ['id' , 'user_obj' , 'course']
     
+    def create(self, validated_data):
+        user_obj = validated_data.pop('user_obj')  # Extract user_obj
+        return profile.objects.create(user_obj=user_obj, **validated_data)
+    

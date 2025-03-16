@@ -160,9 +160,11 @@ class RegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # Saving Profile data
-            pf = profileSerializer(data = request.data)
-            profile.objects.create(user_obj = user , course = pf.validated_data['course'])
+          
+            # Validate and save profile data
+            pf = profileSerializer(data=request.data)
+            if pf.is_valid():
+                pf.save(user_obj=user) 
             
 
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
