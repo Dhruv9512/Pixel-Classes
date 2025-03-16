@@ -61,5 +61,5 @@ class Subject(models.Model):
 # profile
 class profile(models.Model):
     id = models.AutoField(primary_key=True)
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_obj = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.CharField(max_length=20 , null=True)

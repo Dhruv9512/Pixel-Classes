@@ -19,6 +19,8 @@ from .models import PasswordResetToken
 from django.utils.timezone import now
 from django.utils import timezone
 import time
+from home.models import profile
+from home.serializers import profileSerializer
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -157,6 +159,12 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+
+            # Saving Profile data
+            pf = profileSerializer(data = request.data)
+            profile.objects.create(user_obj = user , course = pf.validated_data['course'])
+            
+
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
             response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
             response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')

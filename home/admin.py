@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CourseList , QuePdf , AnsPdf , Subject
+from .models import CourseList , QuePdf , AnsPdf , Subject , profile
 # Register your models here.
 
 # Registering the model CourseList
@@ -21,3 +21,7 @@ class AnsPdfAdmin(admin.ModelAdmin):
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):
     list_display = ('id', 'sem', 'course_obj', 'name')
+
+@admin.register(profile)
+class profileAdmin(admin.ModelAdmin):
+    list_display = ('id' , 'user_obj' , 'course')

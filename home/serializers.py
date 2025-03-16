@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CourseList , QuePdf , AnsPdf , Subject
+from .models import CourseList , QuePdf , AnsPdf , Subject , profile
 
 
 # course list serializer
@@ -26,3 +26,12 @@ class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subject
         fields = ['id', 'name' , 'sem']
+
+
+# Profile serializer
+class profileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = profile
+        fields = ['id' , 'user_obj' , 'course']
+    
