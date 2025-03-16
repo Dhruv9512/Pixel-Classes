@@ -161,7 +161,7 @@ class RegisterView(APIView):
             user = serializer.save()
 
             # set profile details
-            pf = profileSerializer(data={**request.data, "user_obj": user}) 
+            pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
             if pf.is_valid():
                 pf.save()
 
