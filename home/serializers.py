@@ -37,5 +37,7 @@ class profileSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         user_obj = validated_data.pop('user_obj')  # Extract user_obj
-        return profile.objects.create(user_obj=user_obj, **validated_data)
+        pf = profile.objects.create(user_obj=user_obj, course = validated_data['course'])
+
+        return pf
     
