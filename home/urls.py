@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import CoursesView , QuePdfView , AnsPdfUploadView, AnsPdfView , QuePdfSubView ,test , QuePdfGetSubView
+from .views import CoursesView , QuePdfView , AnsPdfUploadView, AnsPdfView , QuePdfSubView , QuePdfGetSubView
 
 
 urlpatterns = [
