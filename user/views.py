@@ -142,6 +142,11 @@ class LoginView(APIView):
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
+
+        # Delete non-verified users (ensure filtering is strict enough)
+        users = User.objects.filter(is_active=False, last_login__isnull=True)
+        users.delete()
+
         """Register a new user and send OTP verification email."""
         email = request.data.get('email')
         username = request.data.get('username')
@@ -180,7 +185,6 @@ class RegisterView(APIView):
                 return response
 
             except Exception as e:
-                user.delete()  # Ensure user is deleted if any error occurs
                 logger.error(f"Unexpected error during registration: {e}")
                 return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
