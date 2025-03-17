@@ -28,6 +28,12 @@ ALLOWED_HOSTS = [
     'localhost:5173', 
 ]
 
+# Celery Settings
+CELERY_BROKER_URL = 'redis://red-cvc31bt6l47c73amks00:6379'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
 # Installed Apps
 INSTALLED_APPS = [
     'corsheaders',  # For CORS handling
