@@ -9,5 +9,5 @@ urlpatterns = [
     path('AnsPdf/', AnsPdfView.as_view(), name='upload_pdf'),
     path('QuePdf/Subject_Pdf', QuePdfSubView.as_view(), name='QuePdf_Subject_Pdf'),
     path('QuePdf/Get_Subjact', QuePdfGetSubView.as_view(), name='QuePdf_Get_Subjact'),
-    path('my-ip/', GetIP),
+    path('my-ip/', GetIP.as_view() , name="ip"),
 ]
