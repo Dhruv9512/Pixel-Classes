@@ -33,19 +33,29 @@ def generate_otp():
 
 # Generate token
 def generate_reset_token(user):
-    # Generate token
+    # Delete expired tokens
+    expired_tokens = PasswordResetToken.objects.filter(expiry_date__lt=timezone.now())
+    expired_tokens.delete()
+
+    # Delete any existing valid token for the user before generating a new one
+    PasswordResetToken.objects.filter(user=user).delete()
+
+    # Generate a new token
     token = default_token_generator.make_token(user)
 
     # Set token expiration date (1 hour from now)
     expiry_date = timezone.now() + timedelta(hours=1)
 
-    # Save the token in the database
+    # Save the new token in the database
     password_reset_token = PasswordResetToken(
         user=user,
         token=token,
         expiry_date=expiry_date
     )
     password_reset_token.save()
+
+    return token  # Return the newly generated token
+
 
     return token
 # Send Registration OTP email

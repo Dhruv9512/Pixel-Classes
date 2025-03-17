@@ -155,27 +155,38 @@ class RegisterView(APIView):
         if User.objects.filter(username=username).exists():
             logger.warning(f"Registration failed: Username {username} already exists.")
             return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
-            # set profile details
-            pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
-            if pf.is_valid():
-                pf.save()
+            try:
+                # Set profile details
+                pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
+                if pf.is_valid():
+                    pf.save()
+                else:
+                    user.delete()  # Delete user if profile creation fails
+                    logger.error(f"Profile creation failed: {pf.errors}")
+                    return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            
-            # setting cookies
-            response = Response(serializer.data, status=status.HTTP_201_CREATED)
-            response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
-            response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1),secure=True, samesite='None')
-            logger.info(f"User {username} registered successfully")
-            send_mail_for_register(user)
-            return response
+                # Setting cookies
+                response = Response(serializer.data, status=status.HTTP_201_CREATED)
+                response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
+                response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
+                logger.info(f"User {username} registered successfully")
+
+                send_mail_for_register(user)
+                return response
+
+            except Exception as e:
+                user.delete()  # Ensure user is deleted if any error occurs
+                logger.error(f"Unexpected error during registration: {e}")
+                return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Resend OTP View
 class ResendOTPView(APIView):
