@@ -168,6 +168,8 @@ class AnsPdfView(APIView):
 import requests
 from django.http import HttpResponse
 
-def get_ip(request):
-    ip = requests.get("https://ifconfig.me").text
-    return HttpResponse(f"Public IP: {ip}")
+@method_decorator(csrf_exempt, name="dispatch")
+class GetIP(APIView):
+    def get(self, request):
+        ip = requests.get("https://ifconfig.me").text
+        return Response({"Public IP": ip})
