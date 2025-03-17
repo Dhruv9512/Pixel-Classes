@@ -4,7 +4,6 @@ import urllib.parse
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from home.models import QuePdf
-from home.tasks import send_email_task  # Import Celery task
 
 @receiver(post_save, sender=QuePdf)
 def que_pdf_notification(sender, instance, created, **kwargs):
