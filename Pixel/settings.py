@@ -29,9 +29,19 @@ ALLOWED_HOSTS = [
 ]
 
 # Celery Settings
-CELERY_BROKER_URL = 'redis://red-cvc31bt6l47c73amks00:6379'
+CELERY_BROKER_URL = 'rediss://red-cvc31bt6l47c73amks00:lAXpA0L3njz1awzeSPAXrykZHz1i2woC@oregon-keyvalue.render.com:6379'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+# Corrected SSL Configuration for Redis
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': None  # Use None instead of 'CERT_NONE'
+}
+
+# Ensures Celery retries broker connection on startup
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+
 
 
 # Installed Apps
