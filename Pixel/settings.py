@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security and Debugging
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")  # Use a secure key in production
-DEBUG = False
+DEBUG = True
 
 # ALLOWED_HOSTS: Allow the frontend and backend URLs
 ALLOWED_HOSTS = [
