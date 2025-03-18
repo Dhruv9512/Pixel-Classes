@@ -10,19 +10,18 @@
         
         <!-- Header -->
         <div style="text-align: center; background-color: #4CAF50; padding: 20px; border-radius: 8px 8px 0 0; color: white;">
-            <h2 style="margin: 0;">Testing purpuse</h2>     
-            {% comment %} New Que PDF Added! {% endcomment %}
+            <h2 style="margin: 0;">New {{ instance.choose }} Added!</h2>     
         </div>
         
         <!-- Content -->
         <div style="padding: 20px; font-size: 16px;">
-            <p>Hi <strong>{{ user.get_full_name|default:user.username }}</strong>,</p>
-            <p>A new <strong>Question Paper PDF</strong> has been uploaded that matches your course details. Here are the details:</p>
+            <p>Hi <strong>{{ user.username }}</strong>,</p>
+            <p>A new <strong>{{ instance.choose }} PDF</strong> has been uploaded that matches your course details. Here are the details:</p>
             
             <ul style="padding-left: 20px;">
                 <li><strong>📚 Subject:</strong> {{ instance.sub }}</li>  <!-- ✅ Fixed this line -->
                 <li><strong>📅 Semester:</strong> {{ instance.sem }}</li>
-                <li><strong>🏫 Year:</strong> {{ instance.year }}</li>
+                <li><strong>📝 Description:</strong> {{ instance.name }}</li>
                 <li><strong>🧑‍🎓 Division:</strong> {{ instance.div }}</li>
             </ul>
 

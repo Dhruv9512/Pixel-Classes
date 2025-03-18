@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CourseList , QuePdf , AnsPdf , Subject , profile
+from .models import CourseList , QuePdf , AnsPdf , Subject 
 
 
 # course list serializer
@@ -12,7 +12,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 class QuePdfSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuePdf
-        fields = ['id', 'course', 'pdf', 'sem', 'dateCreated', 'timeCreated', 'name' , 'div' , 'year' , 'sub']
+        fields = ['id', 'course', 'pdf', 'sem', 'dateCreated', 'timeCreated', 'name' , 'div' , 'year' , 'sub', 'choose']
 
 # AnsPdf serializer
 class AnsPdfSerializer(serializers.ModelSerializer): 
@@ -28,13 +28,3 @@ class SubjectSerializer(serializers.ModelSerializer):
         fields = ['id', 'name' , 'sem']
 
 
-# Profile serializer
-class profileSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = profile
-        fields = ['id' , 'user_obj' , 'course']
-    
-    def create(self, validated_data):
-        return profile.objects.create(**validated_data) 
-    

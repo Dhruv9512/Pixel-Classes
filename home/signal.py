@@ -1,5 +1,5 @@
-import urllib.parse
 import json
+import urllib.parse
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.apps import apps  
@@ -8,40 +8,23 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from celery import shared_task
-from home.serializers import QuePdfSerializer  
-
-@receiver(post_save, sender='home.QuePdf')  # Avoid circular import issues
-def que_pdf_notification(sender, instance, created, **kwargs):
-    """Trigger email notification when a new QuePdf instance is created."""
-    if created:
-        try:
-            serializer = QuePdfSerializer(instance)  # Convert instance to JSON
-            instance_data = serializer.data  
-
-            # Add the PDF link
-            instance_data["pdf_link"] = (
-                f"https://pixelclass.netlify.app/ns?sub={urllib.parse.quote(str(instance.sub))}"
-                f"&id={instance.id}&course={urllib.parse.quote(str(instance.course))}&choose=Assignment"
-            )
-
-            # Debug: Print JSON data being sent
-            print(f"[DEBUG] QuePdf Created - Data Sent to Celery: {json.dumps(instance_data, indent=4)}")
-
-            # Ensure `instance_data` is JSON serializable
-            send_email_task.delay(json.dumps(instance_data))  # Serialize before passing to Celery
-
-        except Exception as e:
-            print(f"[ERROR] Failed to trigger email notification: {e}")
 
 @shared_task
-def send_email_task(instance_data_json):
+def send_email_task(instance_data):
     """Celery task to send an email notification asynchronously."""
-    instance_data = json.loads(instance_data_json)  # Deserialize JSON string back to a dictionary
-    print(f"[INFO] Processing email task for QuePdf ID: {instance_data['id']}")
-
     try:
+        if not isinstance(instance_data, dict):
+            print(f"[ERROR] Received unexpected data format: {type(instance_data)}")
+            return
+
+        print(f"[INFO] Processing email task for QuePdf ID: {instance_data.get('id')}")
+
         QuePdf = apps.get_model('home', 'QuePdf')  # Dynamically get the model
-        instance = QuePdf.objects.get(id=instance_data['id'])  # Fetch the instance using the ID
+        instance = QuePdf.objects.filter(id=instance_data.get('id')).first()
+
+        if not instance:
+            print(f"[ERROR] QuePdf instance with ID {instance_data.get('id')} not found.")
+            return  
 
         Profile = apps.get_model('home', 'Profile')  # Get Profile model
         matching_users = Profile.objects.filter(course=instance.course)
@@ -53,10 +36,15 @@ def send_email_task(instance_data_json):
         subject = "📄 New Assignment Available!"
 
         for user in matching_users:
+            user_email = getattr(user.user_obj, "email", None)
+            if not user_email:
+                print(f"[WARNING] Skipping user {user.user_obj.username} due to missing email.")
+                continue  
+
             try:
                 context = {
                     'instance': instance_data,
-                    'user': {'username': user.user_obj.username},
+                    'user': {'username': getattr(user.user_obj, "username", "User")},
                     'pdf_link': instance_data["pdf_link"]
                 }
 
@@ -69,17 +57,44 @@ def send_email_task(instance_data_json):
                     subject,
                     plain_message,
                     settings.EMAIL_HOST_USER,
-                    [user.user_obj.email],
+                    [user_email],
                     html_message=html_message,
                     fail_silently=False
                 )
-                print(f"[SUCCESS] Email sent to {user.user_obj.username} ({user.user_obj.email})")
+                print(f"[SUCCESS] Email sent to {user.user_obj.username} ({user_email})")
 
             except Exception as e:
-                print(f"[ERROR] Failed to send email to {user.user_obj.username} ({user.user_obj.email}): {e}")
-
-    except QuePdf.DoesNotExist:
-        print(f"[ERROR] QuePdf instance with ID {instance_data['id']} not found.")
+                print(f"[ERROR] Failed to send email to {user.user_obj.username} ({user_email}): {e}")
 
     except Exception as e:
         print(f"[ERROR] Unexpected error while processing email task: {e}")
+
+@receiver(post_save, sender='home.QuePdf')  
+def que_pdf_notification(sender, instance, created, **kwargs):
+    """Trigger email notification when a new QuePdf instance is created."""
+    if created:
+        try:
+            from home.serializers import QuePdfSerializer  
+
+            serializer = QuePdfSerializer(instance) 
+            instance_data = serializer.data  
+
+            instance_data["pdf_link"] = (
+                f"https://pixelclass.netlify.app/ns?"
+                f"sub={urllib.parse.quote(str(getattr(instance, 'sub', '')))}"
+                f"&id={instance.id}"
+                f"&course={urllib.parse.quote(str(getattr(instance, 'course', '')))}"
+                f"&choose={urllib.parse.quote(str(getattr(instance, 'choose', '')))}"
+            )
+
+
+            # Debugging
+            print(f"[DEBUG] QuePdf Created - Data Sent to Celery: {json.dumps(instance_data, indent=4)}")
+
+            if instance.id:
+                send_email_task.apply_async(args=[instance_data])  # Pass dictionary directly
+            else:
+                print("[ERROR] Instance ID is missing, not sending to Celery.")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to trigger email notification: {e}")

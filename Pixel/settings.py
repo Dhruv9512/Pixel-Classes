@@ -43,6 +43,8 @@ CELERY_BROKER_URL = 'rediss://red-cvc31bt6l47c73amks00:lAXpA0L3njz1awzeSPAXrykZH
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
+
+
 # Corrected SSL Configuration for Redis
 CELERY_BROKER_USE_SSL = {
     'ssl_cert_reqs': None  # Use None instead of 'CERT_NONE'
@@ -50,11 +52,13 @@ CELERY_BROKER_USE_SSL = {
 
 # Ensures Celery retries broker connection on startup
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 
 
 # Installed Apps
 INSTALLED_APPS = [
+    'Profile',
     'corsheaders',  # For CORS handling
     'user',
     'home',

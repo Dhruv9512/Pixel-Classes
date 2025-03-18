@@ -19,8 +19,8 @@ from .models import PasswordResetToken
 from django.utils.timezone import now
 from django.utils import timezone
 import time
-from home.models import profile
-from home.serializers import profileSerializer
+from Profile.models import profile
+from Profile.serializers import profileSerializer
 
 # Set up logging
 logger = logging.getLogger(__name__)
