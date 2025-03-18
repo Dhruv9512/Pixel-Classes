@@ -39,9 +39,10 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # Celery Settings
-CELERY_BROKER_URL = 'redis://red-cvc31bt6l47c73amks00:6379'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
+CELERY_BROKER_URL = "redis://red-cvc31bt6l47c73amks00:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
 
 # Corrected SSL Configuration for Redis
 CELERY_BROKER_USE_SSL = {
