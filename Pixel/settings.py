@@ -15,7 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security and Debugging
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")  # Use a secure key in production
-DEBUG = True
+DEBUG = False
 
 # ALLOWED_HOSTS: Allow the frontend and backend URLs
 ALLOWED_HOSTS = [
@@ -40,9 +40,8 @@ app.autodiscover_tasks()
 
 # Celery Settings
 CELERY_BROKER_URL = "redis://red-cvc31bt6l47c73amks00:6379/0"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
 # Corrected SSL Configuration for Redis
 CELERY_BROKER_USE_SSL = {
