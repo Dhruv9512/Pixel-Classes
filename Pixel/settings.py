@@ -28,6 +28,16 @@ ALLOWED_HOSTS = [
     'localhost:5173', 
 ]
 
+
+from celery import Celery
+
+# Set the default Django settings module for the 'celery' program.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Pixel.settings')
+
+app = Celery('Pixel')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+
 # Celery Settings
 CELERY_BROKER_URL = 'rediss://red-cvc31bt6l47c73amks00:lAXpA0L3njz1awzeSPAXrykZHz1i2woC@oregon-keyvalue.render.com:6379'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -40,7 +50,6 @@ CELERY_BROKER_USE_SSL = {
 
 # Ensures Celery retries broker connection on startup
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-
 
 
 
