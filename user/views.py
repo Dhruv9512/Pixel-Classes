@@ -15,6 +15,8 @@ from django.core.cache import cache
 import logging
 from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
+from django.http import HttpResponse
+import urllib
 from .models import PasswordResetToken 
 from django.utils.timezone import now
 from django.utils import timezone
@@ -217,6 +219,7 @@ class ResendOTPView(APIView):
             logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"error": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 # PasswordResetRequestView
 class PasswordResetRequestView(APIView):
     @csrf_exempt
@@ -258,7 +261,6 @@ class PasswordResetRequestView(APIView):
 
 
 # PasswordResetConfirmView
-
 class PasswordResetConfirmView(APIView):
     @csrf_exempt
     def get(self, request, user_id, token):
@@ -286,8 +288,8 @@ class PasswordResetConfirmView(APIView):
         else:
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
 
-# SubmitNewPasswordView
 
+# SubmitNewPasswordView
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -323,7 +325,8 @@ class SubmitNewPasswordView(APIView):
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 # PasswordResetStatusView
 class PasswordResetStatusView(APIView):
     def post(self, request):
@@ -371,11 +374,12 @@ class PasswordResetStatusView(APIView):
 
         except Exception as e:
             import traceback
-            print(traceback.format_exc())  # Prints the full traceback for debugging
+            print(traceback.format_exc())  
             return Response(
                 {"error": f"An unexpected error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 # DeleteNONVerifiedUsers
 class DeleteNONVerifiedUsers(APIView):
@@ -400,3 +404,54 @@ class DeleteNONVerifiedUsers(APIView):
         except Exception as e:
             logger.error(f"Error deleting non-verified users: {e}")
             return Response({"error": "Failed to delete non-verified users."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+# sanding cute email to nusarat
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+class SendCuteEmail(APIView):
+    def get(self, request):
+        try:
+            # Email details
+            subject = "Welcome to Pixel, with Love"
+            recipient_email = "dhruvsharma56780@gmail.com"
+            message = render_to_string('Signup/mitsuha.html', {
+                'link': "https://pixel-classes.onrender.com/admin/",
+            })
+
+            # ✅ Try sending email
+            try:
+                send_mail(
+                    subject, 
+                    "",  
+                    EMAIL_HOST_USER, 
+                    [recipient_email],  
+                    html_message=message  
+                )
+            except Exception as e:
+                print("❌ Email Sending Error:", str(e))
+                return Response({"error": f"Email sending failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # ✅ Encode subject for URL safety
+            encoded_subject = urllib.parse.quote(subject)
+
+            # ✅ Gmail intent URL
+            gmail_intent_url = f"intent://compose?to={recipient_email}&subject={encoded_subject}#Intent;scheme=mailto;package=com.google.android.gm;end;"
+
+            # ✅ Return HTML with JavaScript redirect
+            html_response = f"""
+            <html>
+                <body>
+                    <script>
+                        window.location.href = "{gmail_intent_url}";
+                    </script>
+                    <p>If you are not redirected, <a href="{gmail_intent_url}">click here</a>.</p>
+                </body>
+            </html>
+            """
+
+            return HttpResponse(html_response)
+
+        except Exception as e:
+            print("❌ API Error:", str(e))
+            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
