@@ -436,7 +436,7 @@ class SendCuteEmail(APIView):
             encoded_subject = urllib.parse.quote(subject)
 
             # ✅ Gmail intent URL
-            gmail_web_url = f"https://mail.google.com/mail/?view=cm&to={recipient_email[0]}&su={encoded_subject}"
+            gmail_web_url = f"https://mail.google.com/mail/#inbox"
 
             html_response = f"""
             <html>
