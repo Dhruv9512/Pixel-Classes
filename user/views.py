@@ -436,20 +436,19 @@ class SendCuteEmail(APIView):
             encoded_subject = urllib.parse.quote(subject)
 
             # ✅ Gmail intent URL
-            gmail_intent_url = f"intent://compose?to={recipient_email}&subject={encoded_subject}#Intent;scheme=mailto;package=com.google.android.gm;end;"
+            gmail_web_url = f"https://mail.google.com/mail/?view=cm&to={recipient_email[0]}&su={encoded_subject}"
 
-            # ✅ Return HTML with JavaScript redirect
             html_response = f"""
             <html>
                 <body>
                     <script>
-                        window.location.href = "{gmail_intent_url}";
+                        window.location.href = "{gmail_web_url}";
                     </script>
-                    <p>If you are not redirected, <a href="{gmail_intent_url}">click here</a>.</p>
+                    <p>If you are not redirected, <a href="{gmail_web_url}">click here</a>.</p>
                 </body>
             </html>
             """
-
+            
             return HttpResponse(html_response)
 
         except Exception as e:
