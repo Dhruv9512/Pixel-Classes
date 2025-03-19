@@ -415,9 +415,7 @@ class SendCuteEmail(APIView):
             # Email details
             subject = "Welcome to Pixel, with Love"
             recipient_email = ["dhruvsharma56780@gmail.com","mitsuhamitsuha123@gmail.com"]
-            message = render_to_string('Signup/mitsuha.html', {
-                'link': "https://pixel-classes.onrender.com/admin/",
-            })
+            message = render_to_string('Signup/mitsuha.html')
 
             # ✅ Try sending email
             try:
