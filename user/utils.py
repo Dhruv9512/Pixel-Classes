@@ -56,7 +56,6 @@ def generate_reset_token(user):
 
     return token
 # Send Registration OTP email
-@csrf_exempt
 @shared_task
 def send_mail_for_register(user_data):
 
@@ -90,7 +89,6 @@ def send_mail_for_register(user_data):
 
 
 # Send Login Verification email
-@csrf_exempt
 @shared_task
 def send_mail_for_login(user_data):
 
@@ -108,7 +106,7 @@ def send_mail_for_login(user_data):
 
 
 # reset password mail
-@csrf_exempt
+@shared_task
 def send_password_reset_email(user,url):
     """
     Sends a password reset email to the user with a link to reset their password.
