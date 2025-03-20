@@ -9,7 +9,7 @@ from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,send_password_reset_confirmation,generate_reset_token
+from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
@@ -19,9 +19,7 @@ from django.http import HttpResponse
 import urllib
 from .models import PasswordResetToken 
 from django.utils.timezone import now
-from django.utils import timezone
 import time
-from Profile.models import profile
 from Profile.serializers import profileSerializer
 
 # Set up logging
@@ -69,8 +67,12 @@ class VerifyOTPView(APIView):
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
             logger.info(f"Account activated successfully for user: {user.username}")
+
             # Send email verification for login
-            send_mail_for_login(user)
+            user_data = {
+                "id": user.id,
+            }
+            send_mail_for_login.apply_async(args=[user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -120,7 +122,10 @@ class LoginView(APIView):
                 return Response({"error": "You are not verified, please try to sign up tomorrow or wait for our email."}, status=status.HTTP_403_FORBIDDEN)
          
             # Send email verification for login
-            send_mail_for_login(user)
+            user_data = {
+                "id": user.id,
+            }
+            send_mail_for_login.apply_async(args=[user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -183,7 +188,11 @@ class RegisterView(APIView):
                 response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
                 logger.info(f"User {username} registered successfully")
 
-                send_mail_for_register(user)
+                # Send email verification for login
+                user_data = {
+                    "id": user.id,
+                }
+                send_mail_for_register.apply_async(args=[user_data])
                 return response
 
             except Exception as e:
@@ -212,7 +221,11 @@ class ResendOTPView(APIView):
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            send_mail_for_register(user)
+            # Send email verification for login
+            user_data = {
+                "id": user.id,
+            }
+            send_mail_for_register.apply_async(args=[user_data])
             logger.info(f"Resent OTP email to {user.email}")
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -245,7 +258,11 @@ class PasswordResetRequestView(APIView):
             )
 
             # Send the reset link to the user's email
-            send_password_reset_email(user,reset_url)
+            data = {
+                'reset_url': reset_url,
+                'id': user.id,
+            }
+            send_password_reset_email.apply_async(args=[data])
             logger.info(f"Password reset email sent to {user.email}")
 
             # Return a success response (Note: don't mention whether the user exists for security reasons)
@@ -319,9 +336,6 @@ class SubmitNewPasswordView(APIView):
             token.is_reset = True
             token.save()
 
-            # (Optional) Send a password reset confirmation email
-            send_password_reset_confirmation(user)
-
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -380,31 +394,6 @@ class PasswordResetStatusView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-
-# DeleteNONVerifiedUsers
-class DeleteNONVerifiedUsers(APIView):
-    def get(self, request):
-        try:
-            # Delete expired tokens
-            expired_tokens = PasswordResetToken.objects.filter(expiry_date__lt=timezone.now())
-            count_tokens = expired_tokens.count()
-            expired_tokens.delete()
-            logger.info(f"Deleted {count_tokens} expired tokens.")
-        except Exception as e:
-            logger.error(f"Error deleting expired tokens: {e}")
-            return Response({"error": "Failed to delete expired tokens."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        try:
-            # Delete non-verified users (ensure filtering is strict enough)
-            users = User.objects.filter(is_active=False, last_login__isnull=True)
-            count_users = users.count()
-            users.delete()
-            logger.info(f"Deleted {count_users} non-verified users.")
-            return Response({"message": "Non-verified users deleted successfully."}, status=status.HTTP_200_OK)
-        except Exception as e:
-            logger.error(f"Error deleting non-verified users: {e}")
-            return Response({"error": "Failed to delete non-verified users."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
 # sanding cute email to nusarat
 from django.core.mail import send_mail

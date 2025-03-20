@@ -163,13 +163,3 @@ class AnsPdfView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
-
-import requests
-from django.http import HttpResponse
-
-@method_decorator(csrf_exempt, name="dispatch")
-class GetIP(APIView):
-    def get(self, request):
-        ip = requests.get("https://ifconfig.me").text
-        return Response({"Public IP": ip})

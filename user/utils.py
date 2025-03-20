@@ -13,8 +13,8 @@ from django.utils import timezone
 from django.contrib.auth.tokens import default_token_generator
 from .models import PasswordResetToken
 from django.core.mail import send_mail
-
-
+from celery import shared_task
+from django.contrib.auth.models import User 
 
 
 
@@ -57,7 +57,10 @@ def generate_reset_token(user):
     return token
 # Send Registration OTP email
 @csrf_exempt
-def send_mail_for_register(user):
+@shared_task
+def send_mail_for_register(user_data):
+
+    user = User.objects.get(id=user_data["id"])
     """Send OTP to user for registration."""
     otp = generate_otp()
 
@@ -88,7 +91,10 @@ def send_mail_for_register(user):
 
 # Send Login Verification email
 @csrf_exempt
-def send_mail_for_login(user):
+@shared_task
+def send_mail_for_login(user_data):
+
+    user = User.objects.get(id=user_data["id"])
     """Send login verification email to the user."""
     subject = 'Login Verification'
     message = render_to_string('Login/email_verification_For_Login.html', {
@@ -116,30 +122,6 @@ def send_password_reset_email(user,url):
         {'url': url, 'username': user.username}
     )
 
-    try:
-        # Send the email (using the default email address in Django settings)
-        send_mail(
-            subject,
-            message,
-            EMAIL_HOST_USER,  # Email address from settings
-            [user.email],  # Recipient email address
-            html_message=message  # HTML message version
-        )
-        logger.info(f"Sent password reset email to {user.email}")
-    except Exception as e:
-        logger.error(f"Error sending password reset email to {user.email}: {str(e)}")
-
-
-# Send password reset confirmation email
-@csrf_exempt
-def send_password_reset_confirmation(user):
-    subject = "Password Reset Successful"
-
-    message = render_to_string(
-        'reset_password_success/reset_password_success.html',
-        {'url': "https://pixelclass.netlify.app/login", 'username': user.username , 'current_year': now().year}
-    )
-        
     try:
         # Send the email (using the default email address in Django settings)
         send_mail(
