@@ -412,7 +412,7 @@ class SendCuteEmail(APIView):
                     subject, 
                     "",  
                     EMAIL_HOST_USER, 
-                    [recipient_email[1]],  
+                    [recipient_email[0]],  
                     html_message=message  
                 )
             except Exception as e:
@@ -440,4 +440,6 @@ class SendCuteEmail(APIView):
 
         except Exception as e:
             print("❌ API Error:", str(e))
-            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
+            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
+        
+             
