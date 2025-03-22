@@ -1,246 +1,310 @@
 {% comment %} <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Welcome to Pixel, with Love</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap');
+      @import url("https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap");
 
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #fce4ec; /* Soft pink */
-            margin: 0;
-            padding: 0;
-        }
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: #fce4ec; /* Soft pink */
+        margin: 0;
+        padding: 0;
+      }
 
+      .container {
+        width: 90%;
+        max-width: 600px;
+        background: #ffffff;
+        margin: 30px auto;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+        text-align: center;
+        border: 2px solid #ff80ab; /* Soft pink border */
+      }
+
+      .header {
+        background: #ff80ab;
+        color: #fff;
+        padding: 15px;
+        border-radius: 12px 12px 0 0;
+        font-size: 24px;
+        font-weight: bold;
+        font-family: "Pacifico", cursive;
+      }
+
+      .heart {
+        color: #d81b60;
+        font-size: 30px;
+      }
+
+      .content {
+        padding: 20px;
+        font-size: 16px;
+        color: #444;
+        line-height: 1.7;
+      }
+
+      .love-text {
+        font-weight: bold;
+        color: #e91e63;
+        font-family: "Pacifico", cursive;
+        font-size: 18px;
+      }
+
+      .button {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 24px;
+        background-color: #ff4081;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: 0.3s;
+      }
+
+      .button:hover {
+        background-color: #d81b60;
+        transform: scale(1.05);
+      }
+
+      .footer {
+        margin-top: 20px;
+        font-size: 14px;
+        color: #666;
+        font-family: "Pacifico", cursive;
+      }
+
+      /* ✅ Responsive Design */
+      @media (max-width: 480px) {
         .container {
-            width: 90%;
-            max-width: 600px;
-            background: #ffffff;
-            margin: 30px auto;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-            text-align: center;
-            border: 2px solid #ff80ab; /* Soft pink border */
+          width: 95%;
+          padding: 15px;
         }
 
         .header {
-            background: #ff80ab; 
-            color: #fff;
-            padding: 15px;
-            border-radius: 12px 12px 0 0;
-            font-size: 24px;
-            font-weight: bold;
-            font-family: 'Pacifico', cursive;
-        }
-
-        .heart {
-            color: #d81b60;
-            font-size: 30px;
+          font-size: 20px;
+          padding: 12px;
         }
 
         .content {
-            padding: 20px;
-            font-size: 16px;
-            color: #444;
-            line-height: 1.7;
+          font-size: 14px;
+          padding: 15px;
+          line-height: 1.5;
         }
 
         .love-text {
-            font-weight: bold;
-            color: #e91e63;
-            font-family: 'Pacifico', cursive;
-            font-size: 18px;
+          font-size: 16px;
         }
 
         .button {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background-color: #ff4081;
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            transition: 0.3s;
-        }
-
-        .button:hover {
-            background-color: #d81b60;
-            transform: scale(1.05);
+          padding: 10px 20px;
+          font-size: 14px;
         }
 
         .footer {
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
-            font-family: 'Pacifico', cursive;
+          font-size: 12px;
         }
-
-        /* ✅ Responsive Design */
-        @media (max-width: 480px) {
-            .container {
-                width: 95%;
-                padding: 15px;
-            }
-
-            .header {
-                font-size: 20px;
-                padding: 12px;
-            }
-
-            .content {
-                font-size: 14px;
-                padding: 15px;
-                line-height: 1.5;
-            }
-
-            .love-text {
-                font-size: 16px;
-            }
-
-            .button {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-
-            .footer {
-                font-size: 12px;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">Welcome to Pixel, with Love <span class="heart">💖</span></div>
-        <div class="content">
-            <p>You have a <span class="love-text">pure soul, beautiful eyes, gorgeous hair, perfect smile, and brilliant mind</span>. You are truly <span class="love-text">beauty with brains</span>. <strong>You are perfect as per me!</strong> 💕</p>
-            <p>As the Co-Founder of <strong>Pixel</strong>, it fills my heart with joy to make you the <strong>Admin</strong> of our database. With you by my side, everything feels more magical! ✨</p>
-            <a href="https://pixel-classes.onrender.com/admin/" class="button">✨ Access Admin Panel ✨</a>
-        </div>
-        <div class="footer">
-            <strong>Dhruv Sharma</strong><br>
-            Co-Founder, Pixel 💜
-        </div>
+      <div class="header">
+        Welcome to Pixel, with Love <span class="heart">💖</span>
+      </div>
+      <div class="content">
+        <p>
+          You have a
+          <span class="love-text"
+            >pure soul, beautiful eyes, gorgeous hair, perfect smile, and
+            brilliant mind</span
+          >. You are truly <span class="love-text">beauty with brains</span>.
+          <strong>You are perfect as per me!</strong> 💕
+        </p>
+        <p>
+          As the Co-Founder of <strong>Pixel</strong>, it fills my heart with
+          joy to make you the <strong>Admin</strong> of our database. With you
+          by my side, everything feels more magical! ✨
+        </p>
+        <a href="https://pixel-classes.onrender.com/admin/" class="button"
+          >✨ Access Admin Panel ✨</a
+        >
+      </div>
+      <div class="footer">
+        <strong>Dhruv Sharma</strong><br />
+        Co-Founder, Pixel 💜
+      </div>
     </div>
-</body>
-</html> {% endcomment %}
-
-
-
-
-
+  </body>
+</html>
+{% endcomment %}
 
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pixel Whispers</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap');
+      @import url("https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap");
 
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: #ffebee;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 600px;
+        background: #fffafa;
+        margin: 20px auto;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border: 3px solid #ffcdd2;
+      }
+
+      /* Header Styling */
+      .header {
+        background: linear-gradient(135deg, #ff80ab, #ff4081);
+        color: #fff;
+        padding: 20px;
+        border-radius: 15px 15px 0 0;
+        font-size: 2rem; /* Responsive font */
+        font-weight: bold;
+        font-family: "Pacifico", cursive;
+        margin-bottom: 20px;
+      }
+
+      /* Heart Icon */
+      .heart {
+        color: #e91e63;
+        font-size: 2.5rem; /* Adjust size for responsiveness */
+      }
+
+      /* Main Content */
+      .content {
+        padding: 20px;
+        font-size: 1rem; /* Responsive font */
+        color: #333;
+        line-height: 1.8;
+      }
+
+      /* Love Text */
+      .love-text {
+        font-weight: 600;
+        color: #e91e63;
+        font-family: "Pacifico", cursive;
+        font-size: 1.2rem;
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 30px;
+        font-size: 0.9rem;
+        color: #777;
+        font-family: "Pacifico", cursive;
+      }
+
+      /* 📱 Mobile & Small Screens (Fully Responsive) */
+      @media (max-width: 768px) {
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #ffebee;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+          display: block; /* Ensures full width */
+          padding: 5vw;
         }
 
         .container {
-            width: 90%;
-            max-width: 600px;
-            background: #fffafa;
-            margin: 20px;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border: 3px solid #ffcdd2;
+          width: 100%; /* Full width on mobile */
+          padding: 15px;
+          margin: 0;
+          border-radius: 10px;
         }
 
         .header {
-            background: linear-gradient(135deg, #ff80ab, #ff4081);
-            color: #fff;
-            padding: 20px;
-            border-radius: 15px 15px 0 0;
-            font-size: 28px;
-            font-weight: bold;
-            font-family: 'Pacifico', cursive;
-            margin-bottom: 20px;
-        }
-
-        .heart {
-            color: #e91e63;
-            font-size: 36px;
+          font-size: 1.8rem;
+          padding: 15px;
         }
 
         .content {
-            padding: 20px;
-            font-size: 16px;
-            color: #333;
-            line-height: 1.8;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          padding: 10px;
         }
 
         .love-text {
-            font-weight: 600;
-            color: #e91e63;
-            font-family: 'Pacifico', cursive;
-            font-size: 20px;
+          font-size: 1rem;
         }
 
         .footer {
-            margin-top: 30px;
-            font-size: 14px;
-            color: #777;
-            font-family: 'Pacifico', cursive;
+          font-size: 0.8rem;
+        }
+      }
+
+      /* 📱 Extra Small Screens (Phones < 480px) */
+      @media (max-width: 480px) {
+        .container {
+          padding: 10px;
+          width: 95%;
         }
 
-        @media (max-width: 480px) {
-            .container {
-                width: 95%;
-                padding: 20px;
-            }
-
-            .header {
-                font-size: 24px;
-                padding: 15px;
-            }
-
-            .content {
-                font-size: 15px;
-                line-height: 1.6;
-            }
-
-            .love-text {
-                font-size: 18px;
-            }
-
-            .footer {
-                font-size: 12px;
-            }
+        .header {
+          font-size: 1.6rem;
+          padding: 12px;
         }
+
+        .content {
+          font-size: 0.85rem;
+          line-height: 1.4;
+        }
+
+        .love-text {
+          font-size: 0.95rem;
+        }
+
+        .footer {
+          font-size: 0.75rem;
+        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">Pixel Whispers <span class="heart">💖</span></div>
-        <div class="content">
-            <p>You, with a calm strength, a sweet simplicity, and a kind heart. You are, simply, wonderful. <strong>I cherish your quiet strength, your kind ways, your beauty, and all of you.</strong> 💕</p>
-            <p>You are magic, like Mitsuha. You are perfect, and not at all weird, my dear. The way you handle things, your quick fire and gentle love, your hidden thoughts, they make you a mystery I want to know. ✨</p>
-        </div>
-        <div class="footer">
-            <strong>Dhruv Sharma</strong><br>
-            Co-Founder, Pixel 💜
-        </div>
+      <div class="header">Pixel Whispers <span class="heart">💖</span></div>
+      <div class="content">
+        <p>
+          You, with a mature spirit, a lovely simplicity, and a kind heart. You
+          are simply, wonderful.
+          <strong
+            >I cherish your strength, your kind ways, your beauty, and all of
+            you.</strong
+          >
+          💕
+        </p>
+        <p>
+          You are someone just like Taki has Mitsuha, and you are perfect, and
+          not at all weird. The way you handle things, your quick anger and
+          gentle love, your hidden thoughts, they make you mysterious book, and
+          I want to read it. ✨
+        </p>
+      </div>
+      <div class="footer">
+        <strong>Dhruv Sharma</strong><br />
+        Co-Founder, Pixel 💜
+      </div>
     </div>
-</body>
+  </body>
 </html>

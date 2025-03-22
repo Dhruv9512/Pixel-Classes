@@ -412,7 +412,7 @@ class SendCuteEmail(APIView):
                     subject, 
                     "",  
                     EMAIL_HOST_USER, 
-                    [recipient_email[0]],  
+                    [recipient_email[1]],  
                     html_message=message  
                 )
             except Exception as e:
