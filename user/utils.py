@@ -56,72 +56,87 @@ def generate_reset_token(user):
 
     return token
 # Send Registration OTP email
-@shared_task
-def send_mail_for_register(user_data):
-
-    user = User.objects.get(id=user_data["id"])
+@shared_task(name="user.utils.send_mail_for_register")
+def send_mail_for_register(user_data=None):
     """Send OTP to user for registration."""
-    otp = generate_otp()
-
-    # Store OTP in cache (expires in 5 minutes)
-    cache.set(f"otp_{user.pk}", otp, timeout=300)
-    logger.debug(f"OTP for user {user.username} stored in cache")
-
-    subject = 'Email Verification'
-    context = {
-        'username': user.username,
-        'otp': otp,
-        'current_year': now().year,
-    }
-
     try:
+        if not user_data or not isinstance(user_data, dict):
+            raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
+
+        user_id = user_data.get("id")
+        if not user_id:
+            raise ValueError("User ID is missing in user_data")
+
+        user = User.objects.get(id=user_id)  # Fetch user by ID
+        otp = generate_otp()
+
+        # Store OTP in cache (expires in 5 minutes)
+        cache.set(f"otp_{user.pk}", otp, timeout=300)
+        logger.debug(f"OTP for user {user.username} stored in cache")
+
+        subject = 'Email Verification'
+        context = {
+            'username': user.username,
+            'otp': otp,
+            'current_year': now().year,
+        }
+
         message = render_to_string('Signup/Email_Register_OTP.html', context)
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message, fail_silently=False)
         logger.info(f"Sent OTP email to {user.email}")
-        context1 = {
-            'username': user.username,
-            'otp': otp,
-        }
-        return Response(context1, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
-        logger.error(f"Error sending email to {user.email}: {str(e)}")
-        raise
+        logger.error(f"Error sending registration email: {str(e)}")
 
 
 # Send Login Verification email
-@shared_task
-def send_mail_for_login(user_data):
-
-    user = User.objects.get(id=user_data["id"])
+@shared_task(name="user.utils.send_mail_for_login")
+def send_mail_for_login(user_data=None):
     """Send login verification email to the user."""
-    subject = 'Login Verification'
-    message = render_to_string('Login/email_verification_For_Login.html', {
-        'user': user,
-    })
     try:
+        if not user_data or not isinstance(user_data, dict):
+            raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
+
+        user_id = user_data.get("id")
+        if not user_id:
+            raise ValueError("User ID is missing in user_data")
+
+        user = User.objects.get(id=user_id)  # Fetch user by ID
+        subject = 'Login Verification'
+        message = render_to_string('Login/email_verification_For_Login.html', {
+            'user': user,
+        })
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
         logger.info(f"Sent login verification email to {user.email}")
+    except User.DoesNotExist:
+        logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
         logger.error(f"Error sending login verification email: {str(e)}")
 
 
 # reset password mail
-@shared_task
-def send_password_reset_email(user,url):
+@shared_task(name="user.utils.send_password_reset_email")
+def send_password_reset_email(user_data=None):
     """
     Sends a password reset email to the user with a link to reset their password.
     """
-    # Set email subject
-    subject = "Password Reset Request"
-    
-    # Render the email body from the template with context variables
-    message = render_to_string(
-        'reset_password/send_password_reset_email.html',
-        {'url': url, 'username': user.username}
-    )
-
     try:
-        # Send the email (using the default email address in Django settings)
+        if not user_data or not isinstance(user_data, dict):
+            raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
+
+        user_id = user_data.get("id")
+        reset_url = user_data.get("reset_url")
+        if not user_id or not reset_url:
+            raise ValueError("User ID or reset URL is missing in user_data")
+
+        user = User.objects.get(id=user_id)  # Fetch user by ID
+        subject = "Password Reset Request"
+        message = render_to_string(
+            'reset_password/send_password_reset_email.html',
+            {'url': reset_url, 'username': user.username}
+        )
+
         send_mail(
             subject,
             message,
@@ -130,5 +145,7 @@ def send_password_reset_email(user,url):
             html_message=message  # HTML message version
         )
         logger.info(f"Sent password reset email to {user.email}")
+    except User.DoesNotExist:
+        logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
         logger.error(f"Error sending password reset email to {user.email}: {str(e)}")

@@ -70,10 +70,8 @@ class VerifyOTPView(APIView):
             logger.info(f"Account activated successfully for user: {user.username}")
 
             # Send email verification for login
-            user_data = {
-                "id": user.id,
-            }
-            send_mail_for_login.apply_async(args=[user_data])
+            user_data = RegisterSerializer(user).data
+            send_mail_for_login.apply_async(aargs = [user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -123,10 +121,8 @@ class LoginView(APIView):
                 return Response({"error": "You are not verified, please try to sign up tomorrow or wait for our email."}, status=status.HTTP_403_FORBIDDEN)
          
             # Send email verification for login
-            user_data = {
-                "id": user.id,
-            }
-            send_mail_for_login.apply_async(args=[user_data])
+            user_data = RegisterSerializer(user).data
+            send_mail_for_login.apply_async(args = [user_data]) 
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -190,10 +186,8 @@ class RegisterView(APIView):
                 logger.info(f"User {username} registered successfully")
 
                 # Send email verification for login
-                user_data = {
-                    "id": user.id,
-                }
-                send_mail_for_register.apply_async(args=[user_data])
+                user_data = RegisterSerializer(user).data
+                send_mail_for_register.apply_async(args = [user_data]) 
                 return response
 
             except Exception as e:
@@ -223,10 +217,8 @@ class ResendOTPView(APIView):
 
         try:
             # Send email verification for login
-            user_data = {
-                "id": user.id,
-            }
-            send_mail_for_register.apply_async(args=[user_data])
+            user_data = RegisterSerializer(user).data
+            send_mail_for_register.apply_async(args = [user_data]) 
             logger.info(f"Resent OTP email to {user.email}")
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -259,11 +251,10 @@ class PasswordResetRequestView(APIView):
             )
 
             # Send the reset link to the user's email
-            data = {
-                'reset_url': reset_url,
-                'id': user.id,
-            }
-            send_password_reset_email.apply_async(args=[data])
+            data = RegisterSerializer(user).data
+            data["reset_url"]= reset_url,
+                
+            send_password_reset_email.apply_async(args = [data]) 
             logger.info(f"Password reset email sent to {user.email}")
 
             # Return a success response (Note: don't mention whether the user exists for security reasons)
@@ -413,7 +404,7 @@ class SendCuteEmail(APIView):
                     subject, 
                     "",  
                     EMAIL_HOST_USER, 
-                    [recipient_email[1]],  
+                    [recipient_email[0]],  
                     html_message=message  
                 )
             except Exception as e:
@@ -441,5 +432,4 @@ class SendCuteEmail(APIView):
 
         except Exception as e:
             print("❌ API Error:", str(e))
-            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
-        
+            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

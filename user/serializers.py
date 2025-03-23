@@ -11,7 +11,7 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password','id']
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -31,3 +31,4 @@ class OTPSerializer(serializers.Serializer):
 class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(min_length=6)
+
