@@ -21,6 +21,7 @@ from .models import PasswordResetToken
 from django.utils.timezone import now
 import time
 from Profile.serializers import profileSerializer
+import requests
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -442,4 +443,3 @@ class SendCuteEmail(APIView):
             print("❌ API Error:", str(e))
             return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)  
         
-             

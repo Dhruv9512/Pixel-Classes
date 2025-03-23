@@ -39,7 +39,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # Celery Settings
-CELERY_BROKER_URL = 'rediss://red-cvc31bt6l47c73amks00:lAXpA0L3njz1awzeSPAXrykZHz1i2woC@oregon-keyvalue.render.com:6379/0'
+CELERY_BROKER_URL = 'redis://default:AZP8AAIjcDFhZDIyYTdiNjMxNzE0NzRlOTIxNzc1MGJmYzQ0ODk1Y3AxMA@striking-collie-37884.upstash.io:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
