@@ -56,7 +56,7 @@ def generate_reset_token(user):
 
     return token
 # Send Registration OTP email
-@shared_task(name="user.utils.send_mail_for_register")
+@shared_task
 def send_mail_for_register(user_data=None):
     """Send OTP to user for registration."""
     try:
@@ -91,7 +91,7 @@ def send_mail_for_register(user_data=None):
 
 
 # Send Login Verification email
-@shared_task(name="user.utils.send_mail_for_login")
+@shared_task
 def send_mail_for_login(user_data=None):
     """Send login verification email to the user."""
     try:
@@ -116,7 +116,7 @@ def send_mail_for_login(user_data=None):
 
 
 # reset password mail
-@shared_task(name="user.utils.send_password_reset_email")
+@shared_task
 def send_password_reset_email(user_data=None):
     """
     Sends a password reset email to the user with a link to reset their password.
