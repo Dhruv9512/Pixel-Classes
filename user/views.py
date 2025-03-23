@@ -122,7 +122,7 @@ class LoginView(APIView):
          
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(args = [user_data]) 
+            send_mail_for_login.apply_async(args=[user_data]) 
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -404,7 +404,7 @@ class SendCuteEmail(APIView):
                     subject, 
                     "",  
                     EMAIL_HOST_USER, 
-                    [recipient_email[0]],  
+                    [recipient_email[1]],  
                     html_message=message  
                 )
             except Exception as e:
