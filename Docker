@@ -29,11 +29,9 @@ RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 # Activate Conda in the image
 SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Copy pip requirements separately
-COPY requirements.txt /app/
-
-# Upgrade pip and install pip dependencies from requirements.txt
-RUN pip install --upgrade pip && pip install -r /app/requirements.txt
+# Remove pip requirements copy and installation
+# COPY requirements.txt /app/
+# RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
 # Copy the application code
 COPY . /app/
