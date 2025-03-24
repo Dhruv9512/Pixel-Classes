@@ -63,11 +63,11 @@ def send_mail_for_register(user_data=None):
         if not user_data or not isinstance(user_data, dict):
             raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
 
-        user_id = user_data.get("id")
-        if not user_id:
+        username = user_data.get("username")
+        if not username:
             raise ValueError("User ID is missing in user_data")
 
-        user = User.objects.get(id=user_id)  # Fetch user by ID
+        user = User.objects.get(username=username)
         otp = generate_otp()
 
         # Store OTP in cache (expires in 5 minutes)
@@ -76,7 +76,7 @@ def send_mail_for_register(user_data=None):
 
         subject = 'Email Verification'
         context = {
-            'username': user.username,
+            'username': username,
             'otp': otp,
             'current_year': now().year,
         }
@@ -93,27 +93,29 @@ def send_mail_for_register(user_data=None):
 # Send Login Verification email
 @shared_task
 def send_mail_for_login(user_data=None):
-    logger.info(f"Received user_data: {user_data}")  # Log received data
-
-    if not user_data or not isinstance(user_data, dict):
-        raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
-
-    user_id = user_data.get("id")
-    if not user_id:
-        raise ValueError("User ID is missing in user_data")
-
+    """Send login verification email to the user."""
     try:
-        user = User.objects.get(id=user_id)
+        if not user_data or not isinstance(user_data, dict):
+            raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
+
+        username = user_data.get("username")
+        if not username:
+            raise ValueError("User ID is missing in user_data")
+
+        email = user_data.get("email")
+        if not email:
+            raise ValueError("Email is missing in user_data")
+        
         subject = 'Login Verification'
-        message = render_to_string('Login/email_verification_For_Login.html', {'user': user})
-        send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
-        logger.info(f"Sent login verification email to {user.email}")
+        message = render_to_string('Login/email_verification_For_Login.html', {
+            'username': username,
+        })
+        send_mail(subject, message, EMAIL_HOST_USER, [email], html_message=message)
+        logger.info(f"Sent login verification email to {email}")
     except User.DoesNotExist:
-        logger.error(f"User with ID {user_id} does not exist.")
+        logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
         logger.error(f"Error sending login verification email: {str(e)}")
-
-
 
 
 # reset password mail
@@ -126,27 +128,28 @@ def send_password_reset_email(user_data=None):
         if not user_data or not isinstance(user_data, dict):
             raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
 
-        user_id = user_data.get("id")
+        username = user_data.get("username")
+        email = user_data.get("email")
         reset_url = user_data.get("reset_url")
-        if not user_id or not reset_url:
+        if not username or not reset_url:
             raise ValueError("User ID or reset URL is missing in user_data")
 
-        user = User.objects.get(id=user_id)  # Fetch user by ID
+    
         subject = "Password Reset Request"
         message = render_to_string(
             'reset_password/send_password_reset_email.html',
-            {'url': reset_url, 'username': user.username}
+            {'url': reset_url, 'username': username}
         )
 
         send_mail(
             subject,
             message,
             EMAIL_HOST_USER,  # Email address from settings
-            [user.email],  # Recipient email address
+            [email],  # Recipient email address
             html_message=message  # HTML message version
         )
-        logger.info(f"Sent password reset email to {user.email}")
+        logger.info(f"Sent password reset email to {email}")
     except User.DoesNotExist:
         logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
-        logger.error(f"Error sending password reset email to {user.email}: {str(e)}")
+        logger.error(f"Error sending password reset email to {email}: {str(e)}")

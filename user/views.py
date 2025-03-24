@@ -218,7 +218,7 @@ class ResendOTPView(APIView):
         try:
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_register.apply_async(args = [user_data]) 
+            send_mail_for_register.apply_async(args=[user_data]) 
             logger.info(f"Resent OTP email to {user.email}")
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -252,9 +252,9 @@ class PasswordResetRequestView(APIView):
 
             # Send the reset link to the user's email
             data = RegisterSerializer(user).data
-            data["reset_url"]= reset_url,
+            data["reset_url"]= reset_url
                 
-            send_password_reset_email.apply_async(args = [data]) 
+            send_password_reset_email.apply_async(args=[data]) 
             logger.info(f"Password reset email sent to {user.email}")
 
             # Return a success response (Note: don't mention whether the user exists for security reasons)
