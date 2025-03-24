@@ -29,14 +29,7 @@ ALLOWED_HOSTS = [
 ]
 
 
-from celery import Celery
 
-# Set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Pixel.settings')
-
-app = Celery('Pixel')
-app.config_from_object('django.conf:settings', namespace='CELERY')
-app.autodiscover_tasks()
 
 # Celery Settings
 CELERY_BROKER_URL = 'redis://default:AZP8AAIjcDFhZDIyYTdiNjMxNzE0NzRlOTIxNzc1MGJmYzQ0ODk1Y3AxMA@striking-collie-37884.upstash.io:6379/0'

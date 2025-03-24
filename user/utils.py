@@ -93,26 +93,27 @@ def send_mail_for_register(user_data=None):
 # Send Login Verification email
 @shared_task
 def send_mail_for_login(user_data=None):
-    """Send login verification email to the user."""
+    logger.info(f"Received user_data: {user_data}")  # Log received data
+
+    if not user_data or not isinstance(user_data, dict):
+        raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
+
+    user_id = user_data.get("id")
+    if not user_id:
+        raise ValueError("User ID is missing in user_data")
+
     try:
-        if not user_data or not isinstance(user_data, dict):
-            raise ValueError(f"Expected user_data to be a dictionary, got {type(user_data)}")
-
-        user_id = user_data.get("id")
-        if not user_id:
-            raise ValueError("User ID is missing in user_data")
-
-        user = User.objects.get(id=user_id)  # Fetch user by ID
+        user = User.objects.get(id=user_id)
         subject = 'Login Verification'
-        message = render_to_string('Login/email_verification_For_Login.html', {
-            'user': user,
-        })
+        message = render_to_string('Login/email_verification_For_Login.html', {'user': user})
         send_mail(subject, message, EMAIL_HOST_USER, [user.email], html_message=message)
         logger.info(f"Sent login verification email to {user.email}")
     except User.DoesNotExist:
-        logger.error(f"User with ID {user_data.get('id')} does not exist.")
+        logger.error(f"User with ID {user_id} does not exist.")
     except Exception as e:
         logger.error(f"Error sending login verification email: {str(e)}")
+
+
 
 
 # reset password mail
