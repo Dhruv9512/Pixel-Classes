@@ -1,8 +1,13 @@
 import os
 from celery import Celery
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Pixel.settings')
+# Set default Django settings module
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "Pixel.settings")
 
-app = Celery('Pixel')
-app.config_from_object('django.conf:settings', namespace='CELERY')
+app = Celery("Pixel")
+
+# Load settings from Django settings
+app.config_from_object("django.conf:settings", namespace="CELERY")
+
+# Auto-discover tasks
 app.autodiscover_tasks()

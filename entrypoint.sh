@@ -1,9 +1,12 @@
 #!/bin/bash
-set -e  # Exit on error
+set -e  # Exit immediately if a command fails
 
 echo "Activating Conda environment..."
 source /opt/conda/etc/profile.d/conda.sh
 conda activate myenv
+
+echo "Waiting for database to be ready..."
+sleep 5  # Ensures the database service is up
 
 echo "Applying database migrations..."
 python manage.py migrate --noinput

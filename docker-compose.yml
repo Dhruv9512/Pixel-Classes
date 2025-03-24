@@ -4,7 +4,7 @@ services:
   django:
     build: .
     container_name: django_app
-    command: conda run --no-capture-output -n myenv gunicorn Pixel.wsgi:application --bind 0.0.0.0:8000
+    command: conda run --no-capture-output -n myenv gunicorn Pixel.wsgi:application --bind 0.0.0.0:8000 --workers=4
     volumes:
       - .:/app
     ports:
@@ -26,8 +26,7 @@ services:
   celery:
     build: .
     container_name: celery_worker
-    command: >
-      sh -c "celery -A Pixel purge -f && conda run --no-capture-output -n myenv celery -A Pixel worker --loglevel=info --pool=solo"
+    command: conda run --no-capture-output -n myenv celery -A Pixel worker --loglevel=info --pool=solo
     depends_on:
       - redis
       - django
