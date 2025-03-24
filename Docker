@@ -1,31 +1,38 @@
 # Use Miniconda as the base image
-FROM continuumio/miniconda3:latest
+FROM continuumio/miniconda3
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    tini \
     pkg-config \
     libmariadb-dev \
-    mariadb-client \
+    libmariadb-dev-compat \
     build-essential \
+    tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy only required dependencies first (to speed up build caching)
+# Copy environment.yml into the container
 COPY environment.yml /app/
 
-# Install only required packages (avoid full conda environment recreation)
-RUN conda install -n base --file /app/environment.yml
+# Create the Conda environment from the environment.yml file
+RUN conda env create -f /app/environment.yml
 
-# Ensure Conda is properly initialized
+# Set environment variables to activate the Conda environment
+ENV PATH /opt/conda/envs/myenv/bin:$PATH
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Ensure Conda is properly initialized in non-interactive shells
 RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-# Install Gunicorn, Redis, and Celery inside the Conda environment
-RUN conda run --no-capture-output -n base pip install gunicorn redis celery
+# Activate Conda in the image
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 
-# Copy the entire application code
+# Install Gunicorn, Redis, and Celery inside the Conda environment
+RUN pip install gunicorn redis celery
+
+# Copy the application code
 COPY . /app/
 
 # Ensure entrypoint script is copied and executable
