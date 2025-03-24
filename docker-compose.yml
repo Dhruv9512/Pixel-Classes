@@ -10,24 +10,28 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis
       - celery
     env_file:
       - .env
 
-  redis:
-    image: "redis:latest"
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
-
   celery:
     build: .
     container_name: celery_worker
-    command: conda run --no-capture-output -n myenv celery -A Pixel worker --loglevel=info
+    command: >
+      sh -c "celery -A Pixel purge -f && conda run --no-capture-output -n myenv celery -A Pixel worker --loglevel=info"
     depends_on:
-      - redis
       - django
     env_file:
       - .env
+    restart: always
+
+  celery-beat:
+    build: .
+    container_name: celery_beat
+    command: conda run --no-capture-output -n myenv celery -A Pixel beat --loglevel=info
+    depends_on:
+      - django
+      - celery
+    env_file:
+      - .env
+    restart: always

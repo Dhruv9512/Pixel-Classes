@@ -32,7 +32,7 @@ ALLOWED_HOSTS = [
 
 
 # Celery Settings
-CELERY_BROKER_URL = 'redis://default:AZP8AAIjcDFhZDIyYTdiNjMxNzE0NzRlOTIxNzc1MGJmYzQ0ODk1Y3AxMA@striking-collie-37884.upstash.io:6379/0'
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 
