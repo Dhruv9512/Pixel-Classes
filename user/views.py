@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.tokens import default_token_generator
 from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token,generate_otp
 from datetime import timedelta
+import traceback
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
@@ -151,31 +152,31 @@ class LoginView(APIView):
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
+        """Register a new user and send OTP verification email."""
 
-        # Delete non-verified users (ensure filtering is strict enough)
+        # Step 1: Delete non-verified users
         users = User.objects.filter(is_active=False, last_login__isnull=True)
         users.delete()
 
-        """Register a new user and send OTP verification email."""
         email = request.data.get('email')
         username = request.data.get('username')
 
-        # Check if email already exists
+        # Step 2: Check if email or username already exists
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
             return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if username already exists
         if User.objects.filter(username=username).exists():
             logger.warning(f"Registration failed: Username {username} already exists.")
             return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Step 3: Validate user registration data
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
             try:
-                # Set profile details
+                # Step 4: Create user profile
                 pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
                 if pf.is_valid():
                     pf.save()
@@ -184,31 +185,35 @@ class RegisterView(APIView):
                     logger.error(f"Profile creation failed: {pf.errors}")
                     return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                # Setting cookies
+                # Step 5: Set cookies
                 response = Response(serializer.data, status=status.HTTP_201_CREATED)
                 response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
                 response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
+
                 logger.info(f"User {username} registered successfully")
 
-                
-                # Delete any expired OTPs before generating a new one
+                # Step 6: Delete expired OTPs
                 OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
-                
-                # Delete any existing OTP for the same user (to ensure only one active OTP per user)
+
+                # Step 7: Delete existing OTPs for the same user
                 OTP.objects.filter(user=user).delete()
 
-                # Generate and store a new OTP
+                # Step 8: Generate and store a new OTP
                 otp = generate_otp()
-                OTP.objects.create(user=user, otp=otp)
-               
-                # Send email verification for login
+                new_otp = OTP.objects.create(user=user, otp=otp)
+
+                logger.info(f"OTP generated for {user.email}: {new_otp.otp}")
+
+                # Step 9: Send email verification
                 user_data = RegisterSerializer(user).data
                 user_data["otp"] = otp
-                send_mail_for_register.apply_async(args=[user_data]) 
+                send_mail_for_register.apply_async(args=[user_data])  # Celery Task
+
                 return response
 
             except Exception as e:
                 logger.error(f"Unexpected error during registration: {e}")
+                traceback.print_exc()  # Print full error details in console
                 return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         logger.error(f"Registration failed: {serializer.errors}")

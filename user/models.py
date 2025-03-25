@@ -28,4 +28,7 @@ class OTP(models.Model):
     def is_expired(self):
         return self.created_at < timezone.now() - timedelta(minutes=5)
 
+    def __str__(self):
+        return f"OTP for {self.user.email} - {self.otp}"
+
     
