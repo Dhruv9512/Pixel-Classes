@@ -32,10 +32,8 @@ logger = logging.getLogger(__name__)
 class VerifyOTPView(APIView):
     @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
-        # Deserialize incoming OTP data
         serializer = OTPSerializer(data=request.data)
         
-        # Validate OTP
         if not serializer.is_valid():
             logger.error(f"OTP verification failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -43,42 +41,39 @@ class VerifyOTPView(APIView):
         otp = serializer.validated_data['otp']
         username = request.data.get('username') 
         
-        # Ensure username is provided in the request
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Fetch user from the database by username
-        for _ in range(3):  
-            try:
-                user = User.objects.get(username=username)
-                break
-            except User.DoesNotExist:
-                time.sleep(0.5)  
-        else:
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         stored_otp = OTP.objects.filter(
             user=user, 
-            created_at__gte=timezone.now() - timedelta(minutes=5)  # Ensure OTP is not expired
+            created_at__gte=timezone.now() - timedelta(minutes=5)
         ).order_by('-created_at').first()
 
-        # Check if OTP is available or expired
         if stored_otp is None:
-            logger.warning(f"OTP expired or not found in cache for user {username} with key otp_{user.pk}")
+            logger.warning(f"OTP expired or not found for user {username}")
             return Response(
                 {"error": "The OTP has expired or was not generated. Please request a new OTP."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Compare the entered OTP with the stored OTP
-        if str(otp).strip() == str(stored_otp).strip():
-            user.is_active = True  # Activate user account
+        # Debug print statements
+        print(f"Received OTP: '{otp}'")
+        print(f"Stored OTP: '{stored_otp.otp}'")
+
+        if str(otp).strip() == str(stored_otp.otp).strip():
+            user.is_active = True
             user.save()
+
             logger.info(f"Account activated successfully for user: {user.username}")
 
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(aargs = [user_data])
+            send_mail_for_login.apply_async(args=[user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -91,13 +86,13 @@ class VerifyOTPView(APIView):
                 "refresh_token": str(refresh),
             }
             response = Response(response_data, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
             logger.info(f"User {user.username} logged in successfully")
             return response
         else:
             logger.warning(f"Invalid OTP entered for user: {user.username}")
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)      
 
 
 # Login View
