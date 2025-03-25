@@ -60,7 +60,11 @@ class VerifyOTPView(APIView):
 
         # Check if OTP is available or expired
         if stored_otp is None:
-            return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
+            logger.warning(f"OTP expired or not found in cache for user {username} with key otp_{user.pk}")
+            return Response(
+                {"error": "The OTP has expired or was not generated. Please request a new OTP."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Compare the entered OTP with the stored OTP
         if otp == stored_otp:

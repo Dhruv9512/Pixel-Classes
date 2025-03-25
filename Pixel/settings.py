@@ -28,6 +28,12 @@ ALLOWED_HOSTS = [
     'localhost:5173', 
 ]
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
 
 
 
