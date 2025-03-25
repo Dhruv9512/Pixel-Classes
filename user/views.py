@@ -9,7 +9,7 @@ from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
+from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token,generate_otp
 from datetime import timedelta
 from django.core.cache import cache  
 import logging
@@ -39,14 +39,14 @@ class VerifyOTPView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        username = request.data.get('username')  # Get username from request
+        username = request.data.get('username') 
         
         # Ensure username is provided in the request
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Fetch user from the database by username
-        for _ in range(3):  # Retry fetching in case of a delay
+        for _ in range(3):  
             try:
                 user = User.objects.get(username=username)
                 break
@@ -189,9 +189,22 @@ class RegisterView(APIView):
                 response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
                 logger.info(f"User {username} registered successfully")
 
+                
+                # Delete any expired OTPs before generating a new one
+                cache_key = f"otp_{user.pk}"
+                if cache.get(cache_key):  
+                    cache.delete(cache_key)  
+                    logger.debug(f"🗑️ Deleted expired OTP for user {username}.")
+
+                # Generate and store a new OTP
+                otp = generate_otp()
+                cache.set(cache_key, otp, timeout=300)  # Store OTP for 5 minutes
+                logger.debug(f"✅ OTP {otp} stored in cache with key {cache_key}")
+
                 # Send email verification for login
                 user_data = RegisterSerializer(user).data
-                send_mail_for_register.apply_async(args = [user_data]) 
+                user_data["otp"] = otp
+                send_mail_for_register.apply_async(args=[user_data]) 
                 return response
 
             except Exception as e:
@@ -220,8 +233,20 @@ class ResendOTPView(APIView):
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            # Delete any expired OTPs before generating a new one
+            cache_key = f"otp_{user.pk}"
+            if cache.get(cache_key):  
+                cache.delete(cache_key)  
+                logger.debug(f"🗑️ Deleted expired OTP for user {username}.")
+
+            # Generate and store a new OTP
+            otp = generate_otp()
+            cache.set(cache_key, otp, timeout=300)  # Store OTP for 5 minutes
+            logger.debug(f"✅ OTP {otp} stored in cache with key {cache_key}")
+
             # Send email verification for login
             user_data = RegisterSerializer(user).data
+            user_data["otp"] = otp
             send_mail_for_register.apply_async(args=[user_data]) 
             logger.info(f"Resent OTP email to {user.email}")
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)

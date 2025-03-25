@@ -68,12 +68,9 @@ def send_mail_for_register(user_data=None):
             raise ValueError("User ID is missing in user_data")
 
         user = User.objects.get(username=username)
-        otp = generate_otp()
-
-        # Store OTP in cache (expires in 5 minutes)
-        cache.set(f"otp_{user.pk}", otp, timeout=300)
-        logger.debug(f"OTP for user {user.username} stored in cache")
-
+        otp = user_data.get("otp")
+        if not otp:
+            raise ValueError("OTP is missing in user_data")
         subject = 'Email Verification'
         context = {
             'username': username,
