@@ -19,7 +19,8 @@ from django.shortcuts import HttpResponseRedirect
 from django.http import HttpResponse
 import urllib
 from .models import PasswordResetToken , OTP
-from django.utils.timezone import now, timezone
+from django.utils.timezone import now
+from django.utils import timezone
 import time
 from Profile.serializers import profileSerializer
 import requests
