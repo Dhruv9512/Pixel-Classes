@@ -71,7 +71,7 @@ class VerifyOTPView(APIView):
             )
 
         # Compare the entered OTP with the stored OTP
-        if str(otp) == str(stored_otp):
+        if str(otp).strip() == str(stored_otp).strip():
             user.is_active = True  # Activate user account
             user.save()
             logger.info(f"Account activated successfully for user: {user.username}")
