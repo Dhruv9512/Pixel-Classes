@@ -17,8 +17,8 @@ from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from django.http import HttpResponse
 import urllib
-from .models import PasswordResetToken 
-from django.utils.timezone import now
+from .models import PasswordResetToken , OTP
+from django.utils.timezone import now, timezone
 import time
 from Profile.serializers import profileSerializer
 import requests
@@ -55,8 +55,10 @@ class VerifyOTPView(APIView):
         else:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Retrieve the stored OTP from cache
-        stored_otp = cache.get(f"otp_{user.pk}")
+        stored_otp = OTP.objects.filter(
+            user=user, 
+            created_at__gte=timezone.now() - timedelta(minutes=5)  # Ensure OTP is not expired
+        ).order_by('-created_at').first()
 
         # Check if OTP is available or expired
         if stored_otp is None:
@@ -70,7 +72,6 @@ class VerifyOTPView(APIView):
         if otp == stored_otp:
             user.is_active = True  # Activate user account
             user.save()
-            cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
             logger.info(f"Account activated successfully for user: {user.username}")
 
             # Send email verification for login
@@ -191,16 +192,15 @@ class RegisterView(APIView):
 
                 
                 # Delete any expired OTPs before generating a new one
-                cache_key = f"otp_{user.pk}"
-                if cache.get(cache_key):  
-                    cache.delete(cache_key)  
-                    logger.debug(f"🗑️ Deleted expired OTP for user {username}.")
+                OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
+                
+                # Delete any existing OTP for the same user (to ensure only one active OTP per user)
+                OTP.objects.filter(user=user).delete()
 
                 # Generate and store a new OTP
                 otp = generate_otp()
-                cache.set(cache_key, otp, timeout=300)  # Store OTP for 5 minutes
-                logger.debug(f"✅ OTP {otp} stored in cache with key {cache_key}")
-
+                OTP.objects.create(user=user, otp=otp)
+               
                 # Send email verification for login
                 user_data = RegisterSerializer(user).data
                 user_data["otp"] = otp
@@ -234,15 +234,14 @@ class ResendOTPView(APIView):
 
         try:
             # Delete any expired OTPs before generating a new one
-            cache_key = f"otp_{user.pk}"
-            if cache.get(cache_key):  
-                cache.delete(cache_key)  
-                logger.debug(f"🗑️ Deleted expired OTP for user {username}.")
+            OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
+
+            # Delete any existing OTP for the same user (to ensure only one active OTP per user)
+            OTP.objects.filter(user=user).delete()
 
             # Generate and store a new OTP
             otp = generate_otp()
-            cache.set(cache_key, otp, timeout=300)  # Store OTP for 5 minutes
-            logger.debug(f"✅ OTP {otp} stored in cache with key {cache_key}")
+            OTP.objects.create(user=user, otp=otp)
 
             # Send email verification for login
             user_data = RegisterSerializer(user).data
