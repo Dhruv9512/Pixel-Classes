@@ -214,7 +214,7 @@ class RegisterView(APIView):
             except Exception as e:
                 logger.error(f"Unexpected error during registration: {e}")
                 traceback.print_exc()  # Print full error details in console
-                return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
