@@ -98,8 +98,7 @@ class VerifyOTPView(APIView):
             logger.warning(f"Invalid OTP entered for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
 
-# Google Login Verification View
-@method_decorator(csrf_exempt, name='dispatch')
+# Google Login Verification View@method_decorator(csrf_exempt, name='dispatch')
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -109,53 +108,49 @@ class GoogleLoginAPIView(APIView):
             if not token:
                 return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Step 1: Verify the token with Google
             idinfo = id_token.verify_oauth2_token(
                 token,
                 Request(),
-                os.environ.get('GOOGLE_CLIENT_ID')  
+                os.environ.get('GOOGLE_CLIENT_ID')
             )
 
             email = idinfo['email']
-            
-            # Step 2: Check if user exists
+
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Step 5: Send email notification for login
-            user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(args=[user_data])
+            # Asynchronously send login email
+            try:
+                user_data = RegisterSerializer(user).data
+                send_mail_for_login.apply_async(args=[user_data])
+            except Exception as e:
+                logger.error(f"Error sending login email: {str(e)}")
+                
 
-            # Step 6: Generate JWT tokens
+            # Generate tokens
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
 
-            # Step 7: Login user (session login if needed)
+            # Login user
             login(request, user)
 
-            # Step 8: Return response with tokens & cookies
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-
-            login(request, user)
-
+            # Prepare response
             response_data = {
                 "message": "Login successful!",
                 "access_token": str(access_token),
                 "refresh_token": str(refresh),
                 "username": user.username,
             }
+
             response = Response(response_data, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
             logger.info(f"User {user.username} logged in successfully")
             return response
+
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 
 
@@ -167,129 +162,148 @@ class LoginView(APIView):
         try:
             logger.debug(f"Login attempt for data: {request.data}")
             serializer = LoginSerializer(data=request.data)
-            if serializer.is_valid():
-                username = serializer.validated_data['username']
-                password = serializer.validated_data['password']
-                
-            # Check if the username exists
+
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            username = serializer.validated_data['username']
+            password = serializer.validated_data['password']
+
+            # Check if the user exists
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Check if the password is correct
+            # Authenticate credentials
             user_auth = authenticate(username=username, password=password)
-            if user_auth is None:
+            if not user_auth:
                 return Response({"error": "Incorrect password. Please try again."}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Check if the user is inactive
+            # Check user is active
             if not user_auth.is_active:
-                return Response({"error": "You are not verified, please try to sign up tomorrow or wait for our email."}, status=status.HTTP_403_FORBIDDEN)
-         
-            # Send email verification for login
-            user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(args=[user_data]) 
+                return Response({"error": "You are not verified yet. Please check your email or try later."}, status=status.HTTP_403_FORBIDDEN)
 
+            # Send login email (won't affect flow if fails)
+            try:
+                user_data = RegisterSerializer(user).data
+                send_mail_for_login.apply_async(args=[user_data])
+            except Exception as email_err:
+                logger.warning(f"Login email failed: {str(email_err)}")
+
+            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
 
+            # Login user
             login(request, user)
 
+            # Prepare response
             response_data = {
                 "message": "Login successful!",
                 "access_token": str(access_token),
                 "refresh_token": str(refresh),
                 "username": user.username,
             }
+
             response = Response(response_data, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-            logger.info(f"User {user.username} logged in successfully")
+            logger.info(f"User '{user.username}' logged in successfully")
             return response
+
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
-
-        # Delete non-verified users (ensure filtering is strict enough)
-        users = User.objects.filter(is_active=False, last_login__isnull=True)
-        users.delete()
-
         """Register a new user and send OTP verification email."""
-        email = request.data.get('email')
-        username = request.data.get('username')
 
-        # Check if email already exists
-        if User.objects.filter(email=email).exists():
-            logger.warning(f"Registration failed: Email {email} already exists.")
-            return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Clean up non-verified inactive users
+            User.objects.filter(is_active=False, last_login__isnull=True).delete()
 
-        # Check if username already exists
-        if User.objects.filter(username=username).exists():
-            logger.warning(f"Registration failed: Username {username} already exists.")
-            return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+            email = request.data.get('email')
+            username = request.data.get('username')
 
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
+            # Validate email and username uniqueness
+            if User.objects.filter(email=email).exists():
+                logger.warning(f"Registration failed: Email {email} already exists.")
+                return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if User.objects.filter(username=username).exists():
+                logger.warning(f"Registration failed: Username {username} already exists.")
+                return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validate and save user
+            serializer = RegisterSerializer(data=request.data)
+            if not serializer.is_valid():
+                logger.error(f"User serializer validation failed: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
             user = serializer.save()
 
+            # Validate and save user profile
+            profile_data = {**request.data, "user_obj": user.id}
+            pf = profileSerializer(data=profile_data)
+            if not pf.is_valid():
+                user.delete()  # Rollback user if profile fails
+                logger.error(f"Profile creation failed: {pf.errors}")
+                return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            pf.save()
+
+            # Send email asynchronously
             try:
-                # Set profile details
-                pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
-                if pf.is_valid():
-                    pf.save()
-                else:
-                    user.delete()  # Delete user if profile creation fails
-                    logger.error(f"Profile creation failed: {pf.errors}")
-                    return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
-
-                # Setting cookies
-                response = Response(serializer.data, status=status.HTTP_201_CREATED)
-                response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
-                response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
-                logger.info(f"User {username} registered successfully")
-
-                # Send email verification for login
                 user_data = RegisterSerializer(user).data
-                send_mail_for_register.apply_async(args = [user_data]) 
-                return response
-
+                send_mail_for_register.apply_async(args=[user_data])
             except Exception as e:
-                logger.error(f"Unexpected error during registration: {e}")
-                return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                logger.warning(f"Email sending failed during registration: {str(e)}")
 
-        logger.error(f"Registration failed: {serializer.errors}")
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Prepare response with secure cookies
+            response = Response(serializer.data, status=status.HTTP_201_CREATED)
+            response.set_cookie('status', 'false', httponly=True, max_age=86400, secure=True, samesite='None')
+            response.set_cookie('username', username, httponly=True, max_age=86400, secure=True, samesite='None')
+
+            logger.info(f"User '{username}' registered successfully")
+            return response
+
+        except Exception as e:
+            logger.exception(f"Unexpected error during registration: {str(e)}")
+            return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Resend OTP View
 class ResendOTPView(APIView):
     """View to resend OTP to the user."""
+
     @csrf_exempt
     def post(self, request):
         username = request.data.get('username')
-        
-        # Ensure username is provided in the request
-        if not username:
-            return Response({"error": "Usename name error please retry to login again"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Fetch user from the database
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
+        # Validate input
+        if not username:
+            logger.warning("Resend OTP failed: Username not provided.")
+            return Response({"error": "Username is required. Please retry login."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Attempt to get the user
+        user = User.objects.filter(username=username).first()
+        if not user:
+            logger.warning(f"Resend OTP failed: No user found with username '{username}'.")
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            # Send email verification for login
-            user_data = RegisterSerializer(user).data
-            send_mail_for_register.apply_async(args=[user_data]) 
-            logger.info(f"Resent OTP email to {user.email}")
+            # Send OTP email asynchronously
+            try:
+                user_data = RegisterSerializer(user).data
+                send_mail_for_register.apply_async(args=[user_data])
+                logger.info(f"Resent OTP email to {user.email}")
+            except Exception as e:
+                logger.warning(f"Error sending OTP email: {str(e)}")
+            
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Error resending OTP email to {user.email}: {str(e)}")
+            logger.exception(f"Error resending OTP email to {user.email}: {str(e)}")
             return Response({"error": "Error resending OTP."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -298,42 +312,36 @@ class PasswordResetRequestView(APIView):
     @csrf_exempt
     def post(self, request):
         email = request.data.get('email')
-        
+
         if not email:
             return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Find the user by email
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
+        # Try to find user, but don't leak whether they exist
+        user = User.objects.filter(email=email).first()
+        if not user:
+            logger.warning(f"Password reset attempted for non-existent email: {email}")
+            return Response({"message": "If the email exists, a reset link has been sent."}, status=status.HTTP_200_OK)
 
         try:
-            # Generate a token using Django's default token generator
+            # Generate password reset token and URL
             token = generate_reset_token(user)
-
-            # Build the password reset URL, including the user ID and token
             reset_url = request.build_absolute_uri(
                 reverse('password_reset_confirm', args=[user.pk, token])
             )
 
-            # Send the reset link to the user's email
-            data = RegisterSerializer(user).data
-            data["reset_url"]= reset_url
-                
-            send_password_reset_email.apply_async(args=[data]) 
-            logger.info(f"Password reset email sent to {user.email}")
+            # Prepare data and send email asynchronously
+            try:
+                data = RegisterSerializer(user).data
+                data["reset_url"] = reset_url
+                send_password_reset_email.apply_async(args=[data])
+                logger.info(f"Password reset email sent to {user.email}")
+            except Exception as e:
+                logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
 
-            # Return a success response (Note: don't mention whether the user exists for security reasons)
-            return Response({"message": "Password reset email has been sent."}, status=status.HTTP_200_OK)
-
-        except User.DoesNotExist:
-            logger.warning(f"Password reset attempted for non-existent email: {email}")
-            return Response({"message": "Password reset email has been sent."}, status=status.HTTP_200_OK)
-        
+            return Response({"message": "If the email exists, a reset link has been sent."}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Error during password reset process for {email}: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(f"Error during password reset for {email}: {str(e)}")
+            return Response({"error": "An error occurred while processing your request."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # PasswordResetConfirmView
@@ -343,51 +351,62 @@ class PasswordResetConfirmView(APIView):
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
+            logger.warning(f"Password reset attempt for invalid user ID: {user_id}")
             return Response({"error": "No user found with this ID."}, status=status.HTTP_404_NOT_FOUND)
 
-        if default_token_generator.check_token(user, token):
-            try:
-                password_reset_token = PasswordResetToken.objects.get(user=user, token=token)
-                if password_reset_token.expiry_date < now():
-                    return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
-
-                password_reset_token.is_verified = True
-                password_reset_token.save()
-
-                # Redirect and set cookies
-                redirect_url = f"https://pixelclass.netlify.app/newpassword/{token}"
-                response = HttpResponseRedirect(redirect_url)
-
-                return response
-            except PasswordResetToken.DoesNotExist:
-                return Response({"error": "No reset token found for this user."}, status=status.HTTP_400_BAD_REQUEST)
-        else:
+        # Check if token is valid
+        if not default_token_generator.check_token(user, token):
+            logger.warning(f"Invalid password reset token used for user {user.email}")
             return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            password_reset_token = PasswordResetToken.objects.get(user=user, token=token)
+        except PasswordResetToken.DoesNotExist:
+            logger.error(f"No matching PasswordResetToken found for user {user.email}")
+            return Response({"error": "No reset token found for this user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check expiry
+        if password_reset_token.expiry_date < now():
+            logger.info(f"Expired token used for password reset by {user.email}")
+            return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark token as verified
+        try:
+            password_reset_token.is_verified = True
+            password_reset_token.save()
+        except Exception as e:
+            logger.error(f"Failed to mark token verified for user {user.email}: {str(e)}")
+            return Response({"error": "Could not verify token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Redirect to frontend password reset page
+        redirect_url = f"https://pixelclass.netlify.app/newpassword/{token}"
+        logger.info(f"Redirecting {user.email} to reset password page")
+        return HttpResponseRedirect(redirect_url)
 
 
 # SubmitNewPasswordView
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
     def post(self, request):
-        # Validate input using the serializer
         serializer = PasswordResetSerializer(data=request.data)
-        if serializer.is_valid():
-            token_value = serializer.validated_data['token']
-            new_password = serializer.validated_data['new_password']
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                # Retrieve the token and validate it
-                token = PasswordResetToken.objects.get(token=token_value, is_verified=True, is_reset=False)
-                if token.is_expired():
-                    return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
+        token_value = serializer.validated_data['token']
+        new_password = serializer.validated_data['new_password']
 
-                # Retrieve the user associated with the token
-                user = token.user
+        try:
+            # Try to fetch token
+            token = PasswordResetToken.objects.get(token=token_value, is_verified=True, is_reset=False)
+        except PasswordResetToken.DoesNotExist:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_404_NOT_FOUND)
 
-            except PasswordResetToken.DoesNotExist:
-                return Response({"error": "Invalid or expired token."}, status=status.HTTP_404_NOT_FOUND)
+        if token.is_expired():
+            return Response({"error": "Token has expired."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Update the user's password
+        user = token.user
+        try:
+            # Update password and save user
             user.set_password(new_password)
             user.save()
 
@@ -397,59 +416,51 @@ class SubmitNewPasswordView(APIView):
 
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error while resetting password for {user.email}: {e}")
+            return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # PasswordResetStatusView
 class PasswordResetStatusView(APIView):
     def post(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response(
+                {"error": "Email not provided."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            # Extract email from the request body
-            email = request.data.get('email')
-            
-            if not email:
-                return Response(
-                    {"error": "Email not provided in the request."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Fetch the user by email
+            # Get user and latest token
             user = User.objects.filter(email=email).first()
-
             if not user:
                 return Response(
                     {"error": "No user found with this email."},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Fetch the latest password reset token for the user
             token = PasswordResetToken.objects.filter(user=user).order_by('-created_at').first()
-
             if not token:
                 return Response(
                     {"error": "No password reset token found for this user."},
                     status=status.HTTP_404_NOT_FOUND
                 )
 
-            # Retrieve password reset status flags
-            is_verified = getattr(token, 'is_verified', False)
-            is_reset = getattr(token, 'is_reset', False)
-
-            # Return the password reset status
             return Response(
                 {
-                    "is_verified": is_verified,
-                    "is_reset": is_reset,
+                    "is_verified": token.is_verified,
+                    "is_reset": token.is_reset,
                     "message": "Password reset status retrieved successfully."
                 },
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
-            import traceback
-            print(traceback.format_exc())  
+            logger.exception(f"Error retrieving password reset status for {email}")
             return Response(
-                {"error": f"An unexpected error occurred: {str(e)}"},
+                {"error": "An unexpected error occurred."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
