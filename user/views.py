@@ -26,6 +26,7 @@ from Profile.serializers import profileSerializer
 import requests
 from google.oauth2 import id_token  
 import os
+from google.auth.transport.requests import Request
 
 
 # Set up logging
@@ -111,7 +112,7 @@ class GoogleLoginAPIView(APIView):
             # Step 1: Verify the token with Google
             idinfo = id_token.verify_oauth2_token(
                 token,
-                requests.Request(),
+                Request(),
                 os.environ.get('GOOGLE_CLIENT_ID')  
             )
 
