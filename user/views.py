@@ -145,6 +145,7 @@ class GoogleLoginAPIView(APIView):
                 "message": "Login successful!",
                 "access_token": str(access_token),
                 "refresh_token": str(refresh),
+                "username": user.username,
             }
             response = Response(response_data, status=status.HTTP_200_OK)
             response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
@@ -198,6 +199,7 @@ class LoginView(APIView):
                 "message": "Login successful!",
                 "access_token": str(access_token),
                 "refresh_token": str(refresh),
+                "username": user.username,
             }
             response = Response(response_data, status=status.HTTP_200_OK)
             response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
