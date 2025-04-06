@@ -98,9 +98,10 @@ class VerifyOTPView(APIView):
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
 
 # Google Login Verification View
-@method_decorator(csrf_exempt, name='dispatch')
+
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
+    @csrf_exempt
 
     def post(self, request):
         try:
