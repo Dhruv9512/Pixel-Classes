@@ -98,60 +98,60 @@ class VerifyOTPView(APIView):
             logger.warning(f"Invalid OTP entered for user: {user.username}")
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
 
-# Google Login Verification View@method_decorator(csrf_exempt, name='dispatch')
+# Google Login Verification View
+@method_decorator(csrf_exempt, name='dispatch')
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        try:
-            token = request.data.get('token')
-            if not token:
-                return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            # ✅ Verify token
             idinfo = id_token.verify_oauth2_token(
                 token,
                 Request(),
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
+            email = idinfo.get('email')
+            if not email:
+                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            email = idinfo['email']
-
+            # ✅ Get user with minimal fields
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.only('id', 'username', 'email').get(email=email)
             except User.DoesNotExist:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Asynchronously send login email
-            try:
-                user_data = RegisterSerializer(user).data
-                send_mail_for_login.apply_async(args=[user_data])
-            except Exception as e:
-                logger.error(f"Error sending login email: {str(e)}")
-                
+            # ✅ Login user
+            login(request, user)
 
-            # Generate tokens
+            # ✅ Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
 
-            # Login user
-            login(request, user)
+            # ✅ Send login email asynchronously (non-blocking)
+            try:
+                send_mail_for_login.delay(RegisterSerializer(user).data)
+            except Exception as e:
+                logger.warning(f"Email sending failed: {str(e)}")
 
-            # Prepare response
-            response_data = {
+            logger.info(f"User {user.username} logged in successfully.")
+
+            return Response({
                 "message": "Login successful!",
                 "access_token": str(access_token),
                 "refresh_token": str(refresh),
                 "username": user.username,
-            }
+            }, status=status.HTTP_200_OK)
 
-            response = Response(response_data, status=status.HTTP_200_OK)
-            logger.info(f"User {user.username} logged in successfully")
-            return response
-
+        except ValueError as ve:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.exception(f"Error during login: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+            logger.exception("Google login failed.")
+            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Login View
