@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer, PasswordResetSerializer
@@ -8,22 +9,24 @@ from django.urls import reverse
 from django.conf.global_settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token,generate_otp
+from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
 from datetime import timedelta
-import traceback
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from django.http import HttpResponse
 import urllib
-from .models import PasswordResetToken , OTP
+from .models import PasswordResetToken 
 from django.utils.timezone import now
-from django.utils import timezone
 import time
 from Profile.serializers import profileSerializer
 import requests
+from google.oauth2 import id_token  
+import os
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -32,48 +35,48 @@ logger = logging.getLogger(__name__)
 class VerifyOTPView(APIView):
     @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
+        # Deserialize incoming OTP data
         serializer = OTPSerializer(data=request.data)
         
+        # Validate OTP
         if not serializer.is_valid():
             logger.error(f"OTP verification failed: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        username = request.data.get('username') 
+        username = request.data.get('username')  # Get username from request
         
+        # Ensure username is provided in the request
         if not username:
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
+        # Fetch user from the database by username
+        for _ in range(3):  # Retry fetching in case of a delay
+            try:
+                user = User.objects.get(username=username)
+                break
+            except User.DoesNotExist:
+                time.sleep(0.5)  
+        else:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-        stored_otp = OTP.objects.filter(
-            user=user, 
-            created_at__gte=timezone.now() - timedelta(minutes=5)
-        ).order_by('-created_at').first()
+        # Retrieve the stored OTP from cache
+        stored_otp = cache.get(f"otp_{user.pk}")
 
+        # Check if OTP is available or expired
         if stored_otp is None:
-            logger.warning(f"OTP expired or not found for user {username}")
-            return Response(
-                {"error": "The OTP has expired or was not generated. Please request a new OTP."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Debug print statements
-        print(f"Received OTP: '{otp}'")
-        print(f"Stored OTP: '{stored_otp.otp}'")
-
-        if str(otp).strip() == str(stored_otp.otp).strip():
-            user.is_active = True
+        # Compare the entered OTP with the stored OTP
+        if otp == stored_otp:
+            user.is_active = True  # Activate user account
             user.save()
-
+            cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
             logger.info(f"Account activated successfully for user: {user.username}")
 
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(args=[user_data])
+            send_mail_for_login.apply_async(aargs = [user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -86,13 +89,72 @@ class VerifyOTPView(APIView):
                 "refresh_token": str(refresh),
             }
             response = Response(response_data, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
             logger.info(f"User {user.username} logged in successfully")
             return response
         else:
             logger.warning(f"Invalid OTP entered for user: {user.username}")
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)      
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)       
+
+# Google Login Verification View
+@method_decorator(csrf_exempt, name='dispatch')
+class GoogleLoginAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            token = request.data.get('token')
+            if not token:
+                return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Step 1: Verify the token with Google
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                requests.Request(),
+                os.environ.get('GOOGLE_CLIENT_ID')  
+            )
+
+            email = idinfo['email']
+            
+            # Step 2: Check if user exists
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
+
+            # Step 5: Send email notification for login
+            user_data = RegisterSerializer(user).data
+            send_mail_for_login.apply_async(args=[user_data])
+
+            # Step 6: Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Step 7: Login user (session login if needed)
+            login(request, user)
+
+            # Step 8: Return response with tokens & cookies
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            login(request, user)
+
+            response_data = {
+                "message": "Login successful!",
+                "access_token": str(access_token),
+                "refresh_token": str(refresh),
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            logger.info(f"User {user.username} logged in successfully")
+            return response
+        except Exception as e:
+            logger.exception(f"Error during login: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 
 # Login View
@@ -148,31 +210,31 @@ class LoginView(APIView):
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
-        """Register a new user and send OTP verification email."""
 
-        # Step 1: Delete non-verified users
+        # Delete non-verified users (ensure filtering is strict enough)
         users = User.objects.filter(is_active=False, last_login__isnull=True)
         users.delete()
 
+        """Register a new user and send OTP verification email."""
         email = request.data.get('email')
         username = request.data.get('username')
 
-        # Step 2: Check if email or username already exists
+        # Check if email already exists
         if User.objects.filter(email=email).exists():
             logger.warning(f"Registration failed: Email {email} already exists.")
             return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check if username already exists
         if User.objects.filter(username=username).exists():
             logger.warning(f"Registration failed: Username {username} already exists.")
             return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Step 3: Validate user registration data
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
             try:
-                # Step 4: Create user profile
+                # Set profile details
                 pf = profileSerializer(data={**request.data, "user_obj": user.id}) 
                 if pf.is_valid():
                     pf.save()
@@ -181,36 +243,20 @@ class RegisterView(APIView):
                     logger.error(f"Profile creation failed: {pf.errors}")
                     return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
 
-                # Step 5: Set cookies
+                # Setting cookies
                 response = Response(serializer.data, status=status.HTTP_201_CREATED)
                 response.set_cookie('status', 'false', httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
                 response.set_cookie('username', username, httponly=True, max_age=timedelta(days=1), secure=True, samesite='None')
-
                 logger.info(f"User {username} registered successfully")
 
-                # Step 6: Delete expired OTPs
-                OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
-
-                # Step 7: Delete existing OTPs for the same user
-                OTP.objects.filter(user=user).delete()
-
-                # Step 8: Generate and store a new OTP
-                otp = generate_otp()
-                new_otp = OTP.objects.create(user=user, otp=otp)
-
-                logger.info(f"OTP generated for {user.email}: {new_otp.otp}")
-
-                # Step 9: Send email verification
+                # Send email verification for login
                 user_data = RegisterSerializer(user).data
-                user_data["otp"] = otp
-                send_mail_for_register.apply_async(args=[user_data])  # Celery Task
-
+                send_mail_for_register.apply_async(args = [user_data]) 
                 return response
 
             except Exception as e:
                 logger.error(f"Unexpected error during registration: {e}")
-                traceback.print_exc()  # Print full error details in console
-                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"error": "Something went wrong. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         logger.error(f"Registration failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -234,19 +280,8 @@ class ResendOTPView(APIView):
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            # Delete any expired OTPs before generating a new one
-            OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
-
-            # Delete any existing OTP for the same user (to ensure only one active OTP per user)
-            OTP.objects.filter(user=user).delete()
-
-            # Generate and store a new OTP
-            otp = generate_otp()
-            OTP.objects.create(user=user, otp=otp)
-
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            user_data["otp"] = otp
             send_mail_for_register.apply_async(args=[user_data]) 
             logger.info(f"Resent OTP email to {user.email}")
             return Response({"message": "OTP resent successfully."}, status=status.HTTP_200_OK)
