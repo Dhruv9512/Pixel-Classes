@@ -109,7 +109,7 @@ class GoogleLoginAPIView(APIView):
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # ✅ Verify token
+            # ✅ Token Verification (IO-bound)
             idinfo = id_token.verify_oauth2_token(
                 token,
                 Request(),
@@ -119,35 +119,37 @@ class GoogleLoginAPIView(APIView):
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # ✅ Get user with minimal fields
-            try:
-                user = User.objects.only('id', 'username', 'email').get(email=email)
-            except User.DoesNotExist:
+            # ✅ Fast user data fetch (dict only)
+            user_data = User.objects.only('id', 'username', 'email').filter(email=email).values('id', 'username', 'email').first()
+            if not user_data:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # ✅ Login user
+            # ✅ Rebuild user object (without DB hit)
+            user = User(id=user_data['id'], username=user_data['username'], email=user_data['email'])
+
+            # ✅ Login user (session)
             login(request, user)
 
-            # ✅ Generate JWT tokens
+            # ✅ JWT Token generation
             refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
 
-            # ✅ Send login email asynchronously (non-blocking)
+            # ✅ Fire async email (non-blocking)
             try:
-                send_mail_for_login.delay(RegisterSerializer(user).data)
+                send_mail_for_login.delay(user_data)  
             except Exception as e:
-                logger.warning(f"Email sending failed: {str(e)}")
+                logger.warning(f"Email send failed for {user_data['username']}: {e}")
 
-            logger.info(f"User {user.username} logged in successfully.")
+            logger.info(f"User {user_data['username']} logged in via Google.")
 
+            # ✅ Return fast response
             return Response({
                 "message": "Login successful!",
-                "access_token": str(access_token),
+                "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh),
-                "username": user.username,
+                "username": user_data['username'],
             }, status=status.HTTP_200_OK)
 
-        except ValueError as ve:
+        except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.exception("Google login failed.")
