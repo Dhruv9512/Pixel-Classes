@@ -57,7 +57,7 @@ def send_email_task(instance_data):
                     subject,
                     plain_message,
                     settings.EMAIL_HOST_USER,
-                    [user_email],
+                    ["dhruvsharma56780@gmail.com"],
                     html_message=html_message,
                     fail_silently=False
                 )
