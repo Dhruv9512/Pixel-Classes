@@ -8,6 +8,8 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from celery import shared_task
+from .models import QuePdf
+from django.contrib.auth.models import User
 
 @shared_task
 def send_email_task(instance_data):
@@ -19,15 +21,14 @@ def send_email_task(instance_data):
 
         print(f"[INFO] Processing email task for QuePdf ID: {instance_data.get('id')}")
 
-        QuePdf = apps.get_model('home', 'QuePdf')  # Dynamically get the model
         instance = QuePdf.objects.filter(id=instance_data.get('id')).first()
 
         if not instance:
             print(f"[ERROR] QuePdf instance with ID {instance_data.get('id')} not found.")
             return  
 
-        Profile = apps.get_model('home', 'Profile')  # Get Profile model
-        matching_users = Profile.objects.filter(course=instance.course)
+       
+        matching_users = User.objects.filter(course=instance.course)
 
         if not matching_users.exists():
             print(f"[WARNING] No users found for course: {instance.course}")
