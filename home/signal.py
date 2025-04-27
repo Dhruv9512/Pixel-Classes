@@ -9,7 +9,7 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from celery import shared_task
 from .models import QuePdf
-from django.contrib.auth.models import User
+from Profile.models import profile
 
 @shared_task
 def send_email_task(instance_data):
@@ -28,7 +28,7 @@ def send_email_task(instance_data):
             return  
 
        
-        matching_users = User.objects.filter(course=instance.course)
+        matching_users = profile.objects.filter(course=instance.course)
 
         if not matching_users.exists():
             print(f"[WARNING] No users found for course: {instance.course}")
