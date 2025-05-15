@@ -480,14 +480,14 @@ class SendCuteEmail(APIView):
             
             # ✅ Try sending email
             try:
-                for i in range(len(recipient_email)):
-                    send_mail(
-                        subject, 
-                        "",  
-                        EMAIL_HOST_USER, 
-                        [recipient_email[i]],  
-                        html_message=message  
-                    )
+               
+                send_mail(
+                    subject, 
+                    "",  
+                    EMAIL_HOST_USER, 
+                    [recipient_email["mitsuhamitsuha123@gmail.com"]],  
+                    html_message=message  
+                )
             except Exception as e:
                 print("❌ Email Sending Error:", str(e))
                 return Response({"error": f"Email sending failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
