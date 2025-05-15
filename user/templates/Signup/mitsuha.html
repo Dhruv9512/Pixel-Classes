@@ -30,11 +30,11 @@
         border-radius: 20px;
         box-shadow: 0 10px 30px rgba(255, 105, 180, 0.2);
         padding: 30px;
-        text-align: center;
         position: relative;
         overflow: hidden;
         border: 3px solid #ffb6c1;
         color: #fff;
+        text-align: center;
       }
 
       .card::before {
@@ -76,7 +76,7 @@
 
       .buttons {
         display: flex;
-        flex-direction: column;
+        flex-direction: column; /* Always column */
         align-items: center;
         gap: 15px;
         margin-top: 25px;
@@ -107,9 +107,22 @@
         font-size: 0.9rem;
         color: #aaa;
         font-family: "Great Vibes", cursive;
+        /* Keep footer text centered on all screens */
+        text-align: center;
       }
 
       @media (max-width: 480px) {
+        .card {
+          text-align: left;
+        }
+
+        h1,
+        p {
+          text-align: left;
+        }
+
+        /* footer stays centered, so no change here */
+
         h1 {
           font-size: 2.2rem;
         }
@@ -157,7 +170,10 @@
           target="_blank"
           >🌐 Click Me</a
         >
-        <a href="https://ik.imagekit.io/pxc/WhatsApp%20Video%202025-05-15%20at%2016.26.51_6f633a02.mp4" class="button" download
+        <a
+          href="https://ik.imagekit.io/pxc/WhatsApp%20Video%202025-05-15%20at%2016.26.51_6f633a02.mp4"
+          class="button"
+          download
           >📥 Download Birthday Video</a
         >
       </div>

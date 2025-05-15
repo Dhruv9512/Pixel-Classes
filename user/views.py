@@ -475,18 +475,19 @@ class SendCuteEmail(APIView):
         try:
             # Email details
             subject = "Welcome to Pixel, with Love"
-            recipient_email = ["dhruvsharma56780@gmail.com","janviparasar1022@gmail.com"]
+            recipient_email = ["dhruvsharma56780@gmail.com","janviparasar1022@gmail.com","Mannavlakha1021@gmail.com"]
             message = render_to_string('Signup/mitsuha.html')
             
             # ✅ Try sending email
             try:
-                send_mail(
-                    subject, 
-                    "",  
-                    EMAIL_HOST_USER, 
-                    [recipient_email[1]],  
-                    html_message=message  
-                )
+                for i in range(len(recipient_email)):
+                    send_mail(
+                        subject, 
+                        "",  
+                        EMAIL_HOST_USER, 
+                        [recipient_email[i]],  
+                        html_message=message  
+                    )
             except Exception as e:
                 print("❌ Email Sending Error:", str(e))
                 return Response({"error": f"Email sending failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
