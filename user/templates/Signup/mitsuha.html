@@ -1,332 +1,152 @@
-{% comment %} <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Welcome to Pixel, with Love</title>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Pacifico&family=Poppins:wght@300;400;600&display=swap");
-
-      body {
-        font-family: "Poppins", sans-serif;
-        background-color: #fce4ec; /* Soft pink */
-        margin: 0;
-        padding: 0;
-      }
-
-      .container {
-        width: 90%;
-        max-width: 600px;
-        background: #ffffff;
-        margin: 30px auto;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-        text-align: center;
-        border: 2px solid #ff80ab; /* Soft pink border */
-      }
-
-      .header {
-        background: #ff80ab;
-        color: #fff;
-        padding: 15px;
-        border-radius: 12px 12px 0 0;
-        font-size: 24px;
-        font-weight: bold;
-        font-family: "Pacifico", cursive;
-      }
-
-      .heart {
-        color: #d81b60;
-        font-size: 30px;
-      }
-
-      .content {
-        padding: 20px;
-        font-size: 16px;
-        color: #444;
-        line-height: 1.7;
-      }
-
-      .love-text {
-        font-weight: bold;
-        color: #e91e63;
-        font-family: "Pacifico", cursive;
-        font-size: 18px;
-      }
-
-      .button {
-        display: inline-block;
-        margin-top: 20px;
-        padding: 12px 24px;
-        background-color: #ff4081;
-        color: #ffffff;
-        text-decoration: none;
-        border-radius: 50px;
-        font-size: 16px;
-        font-weight: bold;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        transition: 0.3s;
-      }
-
-      .button:hover {
-        background-color: #d81b60;
-        transform: scale(1.05);
-      }
-
-      .footer {
-        margin-top: 20px;
-        font-size: 14px;
-        color: #666;
-        font-family: "Pacifico", cursive;
-      }
-
-      /* ✅ Responsive Design */
-      @media (max-width: 480px) {
-        .container {
-          width: 95%;
-          padding: 15px;
-        }
-
-        .header {
-          font-size: 20px;
-          padding: 12px;
-        }
-
-        .content {
-          font-size: 14px;
-          padding: 15px;
-          line-height: 1.5;
-        }
-
-        .love-text {
-          font-size: 16px;
-        }
-
-        .button {
-          padding: 10px 20px;
-          font-size: 14px;
-        }
-
-        .footer {
-          font-size: 12px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        Welcome to Pixel, with Love <span class="heart">💖</span>
-      </div>
-      <div class="content">
-        <p>
-          You have a
-          <span class="love-text"
-            >pure soul, beautiful eyes, gorgeous hair, perfect smile, and
-            brilliant mind</span
-          >. You are truly <span class="love-text">beauty with brains</span>.
-          <strong>You are perfect as per me!</strong> 💕
-        </p>
-        <p>
-          As the Co-Founder of <strong>Pixel</strong>, it fills my heart with
-          joy to make you the <strong>Admin</strong> of our database. With you
-          by my side, everything feels more magical! ✨
-        </p>
-        <a href="https://pixel-classes.onrender.com/admin/" class="button"
-          >✨ Access Admin Panel ✨</a
-        >
-      </div>
-      <div class="footer">
-        <strong>Dhruv Sharma</strong><br />
-        Co-Founder, Pixel 💜
-      </div>
-    </div>
-  </body>
-</html>
-{% endcomment %}
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pixel Whispers</title>
+    <title>Happy Birthday 🎉</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Great+Vibes&family=Quicksand:wght@400;600&display=swap");
 
       body {
-        font-family: "Poppins", sans-serif;
-        background-color: #ffe4e9; /* Lighter pink */
         margin: 0;
         padding: 0;
+        background: #000; /* Black background */
+        font-family: "Quicksand", sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
       }
-      
-      .container {
+
+      .card {
+        max-width: 650px;
         width: 90%;
-        max-width: 600px;
-        background: #fffafc;
-        margin: 20px auto;
-        padding: 30px;
+        background: #1c1c1c;
         border-radius: 20px;
-        box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 30px rgba(255, 105, 180, 0.2);
+        padding: 30px;
         text-align: center;
-        border: 3px solid #ffb6c1; /* Softer pink border */
-      }
-      
-      /* Header Styling */
-      .header {
-        background: linear-gradient(135deg, #ff80ab, #ff4081);
+        position: relative;
+        overflow: hidden;
+        border: 3px solid #ffb6c1;
         color: #fff;
-        padding: 20px;
-        border-radius: 15px 15px 0 0;
-        font-size: 2rem; /* Responsive font */
-        font-weight: bold;
+      }
+
+      .card::before {
+        content: "🎂";
+        font-size: 5rem;
+        position: absolute;
+        top: -20px;
+        left: -20px;
+        opacity: 0.03;
+        transform: rotate(-30deg);
+      }
+
+      h1 {
         font-family: "Great Vibes", cursive;
+        font-size: 2.8rem;
+        color: #ff69b4;
+        margin-bottom: 10px;
+      }
+
+      .heart {
+        color: #ff1493;
+        font-size: 1.8rem;
+        margin: 0 5px;
+      }
+
+      p {
+        font-size: 1rem;
+        color: #ddd;
+        line-height: 1.8;
         margin-bottom: 20px;
       }
-      
-      /* Heart Icon */
-      .heart {
-        color: #ff4081;
-        font-size: 2.5rem;
-      }
-      
-      /* Main Content */
-      .content {
-        padding: 20px;
-        font-size: 1rem;
-        color: #333;
-        line-height: 1.8;
-      }
-      
-      /* Love Text */
-      .love-text {
-        font-weight: 600;
-        color: #ff4081;
+
+      .highlight {
         font-family: "Great Vibes", cursive;
         font-size: 1.3rem;
+        color: #ff69b4;
+        font-weight: bold;
       }
-      
-      /* Soft Pink for strong elements */
-      strong {
-        color: #ff70a0;
+
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 25px;
       }
-      
-      /* Footer */
+
+      .button {
+        text-decoration: none;
+        background-color: #ff69b4;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 30px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
+      }
+
+      .button:hover {
+        background-color: #e91e63;
+        transform: scale(1.05);
+      }
+
       .footer {
         margin-top: 30px;
         font-size: 0.9rem;
-        color: #777;
+        color: #aaa;
         font-family: "Great Vibes", cursive;
       }
-      
-      /* 📱 Mobile & Small Screens */
-      @media (max-width: 768px) {
-        body {
-          display: block;
-          padding: 5vw;
+
+      @media (max-width: 480px) {
+        h1 {
+          font-size: 2.2rem;
         }
-      
-        .container {
-          width: 100%;
-          padding: 15px;
-          margin: 0;
-          border-radius: 10px;
-        }
-      
-        .header {
-          font-size: 1.8rem;
-          padding: 15px;
-        }
-      
-        .content {
+        p {
           font-size: 0.9rem;
-          line-height: 1.5;
-          padding: 10px;
         }
-      
-        .love-text {
+        .highlight {
           font-size: 1.1rem;
         }
-      
-        .footer {
-          font-size: 0.8rem;
-        }
       }
-      
-      /* 📱 Extra Small Screens (Phones < 480px) */
-      @media (max-width: 480px) {
-        .container {
-          padding: 10px;
-          width: 95%;
-        }
-      
-        .header {
-          font-size: 1.6rem;
-          padding: 12px;
-        }
-      
-        .content {
-          font-size: 0.85rem;
-          line-height: 1.4;
-        }
-      
-        .love-text {
-          font-size: 1rem;
-        }
-      
-        .footer {
-          font-size: 0.75rem;
-        }
-      }
-      
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">💖 A Job Offer Like No Other – Pixel Whispers 💖</div>
-      <div class="content">
-        <p>
-          From the moment I met you, I was drawn to your kindness and the beauty
-          of your heart.
-          <strong>
-            I cherish your warmth, your beauty, and everything that makes you
-            uniquely you.
-          </strong>
-          💕
-        </p>
-        <p>
-          I admire your maturity, the simple way you live life, and the kindness
-          you share with everyone.
-          <strong
-            >You are truly special, not a weird, but someone wonderfully
-            unique.</strong
-          >
-          ✨💕
-        </p>
-        <p>
-          You are someone special, just like Taki has Mitsuha and a processor
-          has its algorithms—essential and perfect in your own way.<strong
-            >The way you handle things with quiet strength, the fire in your
-            quick anger, the softness in your gentle love, and the depth of your
-            hidden thoughts—they make you a beautiful mystery, a story I long to
-            read, page by page.</strong
-          >
-          ✨
-        </p>
-        <p>
-          Because of these incredible qualities, I, Dhruv Sharma, Co-Founder of
-          Pixel, want to offer you a job as a UI/UX designer. Because of you,
-          our journey will feel like a beautiful dream—one I never want to wake
-          up from. ✨💕
-        </p>
+    <div class="card">
+      <h1>💖 Happy Birthday, Nushu! 🎉</h1>
+
+      <p>
+        Main itna talented nahi hoon ki kuch achha likh paun, par badi mehnat
+        karke ye shayari banayi hai aur ChatGPT se poetic words liye hain, to ek
+        baar padh lena. 😊
+      </p>
+
+      <p>
+        Saadgi basti hai aankhon mein teri,<br />
+        Tere chehre pe muskaan sajti hai. <br />
+        Na jaane kya raaz hai teri har ada mein, <br />
+        Har nazar bas tujh par hi rukti hai. <br /><br />
+        In nazron se khuda tujhe mehfooz rakhe, <br />
+        Har khushi se tera daaman bhare. <br />
+        Yahi dua maangi hai maine, <br />
+        Tere is janamdin mein. 🎂✨
+      </p>
+
+      <div class="buttons">
+        <a
+          href="https://happy-birthday-rouge-delta.vercel.app/"
+          class="button"
+          target="_blank"
+          >🌐 Click Me</a
+        >
+        <a href="https://happy-birthday-rouge-delta.vercel.app/Hime.mp4" class="button" download
+          >📥 Download Birthday Video</a
+        >
       </div>
+
       <div class="footer">
+        With love,<br />
         <strong>Dhruv Sharma</strong><br />
         Co-Founder, Pixel 💜
       </div>
