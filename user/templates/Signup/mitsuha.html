@@ -54,12 +54,6 @@
         margin-bottom: 10px;
       }
 
-      .heart {
-        color: #ff1493;
-        font-size: 1.8rem;
-        margin: 0 5px;
-      }
-
       p {
         font-size: 1rem;
         color: #ddd;
@@ -67,14 +61,9 @@
         margin-bottom: 20px;
       }
 
-      .highlight {
-        font-family: "Great Vibes", cursive;
-        font-size: 1.3rem;
-        color: #ff69b4;
-        font-weight: bold;
-      }
-
       .buttons {
+        display: flex;
+        flex-direction: column; /* stacked vertically always */
         align-items: center;
         gap: 15px;
         margin-top: 25px;
@@ -105,7 +94,6 @@
         font-size: 0.9rem;
         color: #aaa;
         font-family: "Great Vibes", cursive;
-        /* Keep footer text centered on all screens */
         text-align: center;
       }
 
@@ -119,18 +107,12 @@
           text-align: left;
         }
 
-        /* footer stays centered, so no change here */
-
         h1 {
           font-size: 2.2rem;
         }
 
         p {
           font-size: 0.9rem;
-        }
-
-        .highlight {
-          font-size: 1.1rem;
         }
 
         .button {
