@@ -195,7 +195,7 @@ class GoogleSignupAPIView(APIView):
             # Send welcome email asynchronously
             try:
                 user_data = RegisterSerializer(user).data
-                send_mail_for_register.apply_async(args=[user_data])
+                send_mail_for_login.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.username}: {e}")
             # Login user
