@@ -1,3 +1,4 @@
+import email
 from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -173,6 +174,8 @@ class GoogleSignupAPIView(APIView):
             )
             email = idinfo.get('email')
             username=idinfo.get('name', email.split('@')[0])
+            if User.objects.filter(username=username).exists():
+                username = email.split('@')[0].lower()
             first_name = idinfo.get('given_name', '')
             last_name = idinfo.get('family_name', '') 
             
