@@ -155,6 +155,70 @@ class GoogleLoginAPIView(APIView):
             logger.exception("Google login failed.")
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Google signup verification view
+@method_decorator(csrf_exempt, name='dispatch')
+class GoogleSignupAPIView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Verify the token
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                Request(),
+                os.environ.get('GOOGLE_CLIENT_ID')
+            )
+            email = idinfo.get('email')
+            username=idinfo.get('name', email.split('@')[0])
+            first_name = idinfo.get('given_name', '')
+            last_name = idinfo.get('family_name', '') 
+            
+            if not email:
+                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if user already exists
+            user, created = User.objects.get_or_create(email=email, defaults={'username': username, 'is_active': False, 'first_name': first_name, 'last_name': last_name})
+            if not created:
+                return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
+
+            
+            # Set user as active and save
+            user.is_active = True
+            user.save()
+
+            # Send welcome email asynchronously
+            try:
+                user_data = RegisterSerializer(user).data
+                send_mail_for_register.apply_async(args=[user_data])
+            except Exception as e:
+                logger.warning(f"Email send failed for {user.username}: {e}")
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Login user
+            login(request, user)
+
+            response_data = {
+                "message": "Signup successful!",
+                "access_token": str(access_token),
+                "refresh_token": str(refresh),
+                "username": user.username,
+            }
+            
+            logger.info(f"User {user.username} signed up successfully via Google.")
+            return Response(response_data, status=status.HTTP_201_CREATED)
+
+        except ValueError:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception("Google signup failed.")
+            return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # Login View
 class LoginView(APIView):
@@ -215,6 +279,7 @@ class LoginView(APIView):
         except Exception as e:
             logger.exception(f"Error during login: {str(e)}")
             return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class RegisterView(APIView):
     @csrf_exempt
