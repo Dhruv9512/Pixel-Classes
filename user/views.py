@@ -206,7 +206,7 @@ class GoogleSignupAPIView(APIView):
 
             # ✅ Return fast response
             return Response({
-                "message": "Login successful!",
+                "message": "Signup successful!",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh),
                 "username": user_data['username'],
