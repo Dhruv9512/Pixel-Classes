@@ -195,24 +195,19 @@ class GoogleSignupAPIView(APIView):
                 send_mail_for_register.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.username}: {e}")
-
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-
             # Login user
             login(request, user)
 
-            response_data = {
-                "message": "Signup successful!",
-                "access_token": str(access_token),
-                "refresh_token": str(refresh),
-                "username": user.username,
-            }
-            
-            logger.info(f"User {user.username} signed up successfully via Google.")
-            return Response(response_data, status=status.HTTP_201_CREATED)
+            # ✅ JWT Token generation
+            refresh = RefreshToken.for_user(user)
 
+            # ✅ Return fast response
+            return Response({
+                "message": "Login successful!",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
+                "username": user_data['username'],
+            }, status=status.HTTP_200_OK)    
         except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
