@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 
 # Create your models here.
-class profile(models.Model):  # Renamed to `Profile` (capitalized for convention)
+class profile(models.Model):  
     id = models.AutoField(primary_key=True)
     user_obj = models.ForeignKey(User, on_delete=models.CASCADE)
-    course = models.CharField(max_length=20)  
+    profile_pic = models.ImageField(upload_to='profile_pics/', blank=True, null=True)  

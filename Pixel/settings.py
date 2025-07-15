@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv() 
 
+
+
+
 VERCEL_BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
 # Base directory setup
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -98,7 +101,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_DIRS = [
     BASE_DIR / "static",  # or use the full path like 'C:/pxc/Pixel-Classes/static'
 ]
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # For production, Django will collect all static files into this directory
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

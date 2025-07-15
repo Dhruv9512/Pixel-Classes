@@ -28,7 +28,7 @@ import requests
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-
+from Profile.models import profile
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -177,7 +177,9 @@ class GoogleSignupAPIView(APIView):
             if User.objects.filter(username=username).exists():
                 username = email.split('@')[0].lower()
             first_name = idinfo.get('given_name', '')
-            last_name = idinfo.get('family_name', '') 
+            last_name = idinfo.get('family_name', '')
+            profile_pic = idinfo.get('picture', '')
+    
             
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
@@ -187,7 +189,11 @@ class GoogleSignupAPIView(APIView):
             if not created:
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-            
+            # Add profile pic
+            profile.objects.create(
+                user_obj=user,
+                profile_pic=profile_pic
+            )
             # Set user as active and save
             user.is_active = True
             user.save()
@@ -307,17 +313,7 @@ class RegisterView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             user = serializer.save()
-
-            # Validate and save user profile
-            profile_data = {**request.data, "user_obj": user.id}
-            pf = profileSerializer(data=profile_data)
-            if not pf.is_valid():
-                user.delete()  # Rollback user if profile fails
-                logger.error(f"Profile creation failed: {pf.errors}")
-                return Response(pf.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            pf.save()
-
+            
             # Send email asynchronously
             try:
                 user_data = RegisterSerializer(user).data
