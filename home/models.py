@@ -41,9 +41,9 @@ class QuePdf(models.Model):
 # Model of AnsPdf
 class AnsPdf(models.Model):
     que_pdf = models.ForeignKey(QuePdf, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)  # Removed null=True
-    contant = models.TextField()  # Removed null=True
-    pdf = models.URLField(max_length=255)  # Removed null=True
+    name = models.CharField(max_length=255) 
+    contant = models.TextField() 
+    pdf = models.URLField(max_length=255) 
 
 # Model for subject name
 class Subject(models.Model):
