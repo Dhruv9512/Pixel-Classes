@@ -23,5 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/', include('user.urls')),  
     path('api/home/', include('home.urls')),
-    path('api/home/', include('Profile.urls')),  
+    path('api/Profile/', include('Profile.urls')),  
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

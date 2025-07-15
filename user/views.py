@@ -1,4 +1,3 @@
-import email
 from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -24,11 +23,10 @@ from .models import PasswordResetToken
 from django.utils.timezone import now
 import time
 from Profile.serializers import profileSerializer
-import requests
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-from Profile.models import profile
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -190,10 +188,12 @@ class GoogleSignupAPIView(APIView):
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Add profile pic
-            profile.objects.create(
-                user_obj=user,
-                profile_pic=profile_pic
-            )
+            serialize_profile = profileSerializer(data={'profile_pic': profile_pic, 'user_obj': user.id})
+            if not serialize_profile.is_valid():
+                return Response(serialize_profile.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Create profile instance
+            serialize_profile.save()
+        
             # Set user as active and save
             user.is_active = True
             user.save()
@@ -313,7 +313,7 @@ class RegisterView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             user = serializer.save()
-            
+
             # Send email asynchronously
             try:
                 user_data = RegisterSerializer(user).data
