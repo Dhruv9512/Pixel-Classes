@@ -315,7 +315,7 @@ class RegisterView(APIView):
             email = request.data.get('email')
             username = request.data.get('username')
             profile_pic = request.data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
-            if profile_pic==profile_pic:
+            if not profile_pic == "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
                 blob = put(f"Profile/{profile_pic}", profile_pic.read())
                 profile_pic = blob["url"]
                 
