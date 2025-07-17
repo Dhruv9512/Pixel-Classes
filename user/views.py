@@ -23,12 +23,12 @@ import urllib
 from .models import PasswordResetToken 
 from django.utils.timezone import now
 import time
-from Profile.models import profile
+from Profile.serializers import CombinedProfileSerializer
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
 from vercel_blob import put  
-from django.core.files.base import ContentFile
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -197,21 +197,17 @@ class GoogleSignupAPIView(APIView):
             if not created:
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Save profile picture from URL
-            profile_pic_file = None
+        # Save profile picture if provided
             if profile_pic_url:
-                try:
-                    response = requests.get(profile_pic_url)
-                    if response.status_code == 200:
-                        profile_pic_file = ContentFile(response.content, name=f"{username}_google.jpg")
-                except Exception as e:
-                    logger.warning(f"Failed to download profile pic: {e}")
+                serializer = CombinedProfileSerializer(
+                    data={
+                        'user_obj': user,
+                        'profile_pic': profile_pic_url
+                    }
+                )
+                if serializer.is_valid():
+                    serializer.save()
 
-            # Create profile instance
-            profile_instance = profile(user_obj=user)
-            if profile_pic_file:
-                profile_instance.profile_pic.save(profile_pic_file.name, profile_pic_file)
-            profile_instance.save()
 
             # Set user as active
             user.is_active = True
