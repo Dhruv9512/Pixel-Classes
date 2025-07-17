@@ -26,7 +26,7 @@ from Profile.serializers import profileSerializer
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-
+from vercel_blob import put  # Assuming you have a Vercel Blob storage setup
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -296,7 +296,11 @@ class RegisterView(APIView):
 
             email = request.data.get('email')
             username = request.data.get('username')
-
+            profile_pic = request.data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
+            if profile_pic==profile_pic:
+                blob = put(f"Profile/{profile_pic}", profile_pic.read())
+                profile_pic = blob["url"]
+                
             # Validate email and username uniqueness
             if User.objects.filter(email=email).exists():
                 logger.warning(f"Registration failed: Email {email} already exists.")
