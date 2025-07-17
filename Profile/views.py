@@ -6,7 +6,7 @@ from Profile.models import profile as ProfileModel
 from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
-from vercel_blob import del_
+from vercel_blob import delete  as del_
 
 
 class ProfileDetailsView(APIView):
@@ -134,3 +134,5 @@ class EditProfileView(APIView):
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        

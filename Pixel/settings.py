@@ -223,18 +223,41 @@ SIMPLE_JWT = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': 'INFO',  # You can use 'WARNING' to suppress more output
             'class': 'logging.StreamHandler',
         },
     },
+
     'loggers': {
+        # Core Django logs (INFO and up)
         'django': {
             'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # Suppress watchdog logs that show 'first seen with mtime'
+        'watchdog': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'watchdog.observers': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+
+        # Optional: suppress logs from other noisy packages like DRF
+        'rest_framework': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
 }
+
 
