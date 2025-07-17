@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-
+from Profile.models import profile as ProfileModel
 # Serializer for Login
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, required=True)
@@ -11,13 +11,17 @@ class LoginSerializer(serializers.Serializer):
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','id']
+        fields = ['username', 'email', 'password','id','profile_pic']
 
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password']
+        )
+        ProfileModel.objects.create(
+            user_obj=user,
+            profile_pic=validated_data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
         )
         user.is_active = False
         user.save()

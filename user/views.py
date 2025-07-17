@@ -26,7 +26,7 @@ from Profile.serializers import profileSerializer
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-
+from vercel_blob import put
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -177,7 +177,8 @@ class GoogleSignupAPIView(APIView):
             first_name = idinfo.get('given_name', '')
             last_name = idinfo.get('family_name', '')
             profile_pic = idinfo.get('picture', '')
-    
+
+            blob = put(f"Profile/{profile_pic.name}", profile_pic.read())
             
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
@@ -188,7 +189,7 @@ class GoogleSignupAPIView(APIView):
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Add profile pic
-            serialize_profile = profileSerializer(data={'profile_pic': profile_pic, 'user_obj': user.id})
+            serialize_profile = profileSerializer(data={'profile_pic': blob["url"], 'user_obj': user.id})
             if not serialize_profile.is_valid():
                 return Response(serialize_profile.errors, status=status.HTTP_400_BAD_REQUEST)
             # Create profile instance
