@@ -45,9 +45,19 @@ class userPostsView(APIView):
             # Fetch posts related to the user
             all_posts = AnsPdf.objects.filter(name=username)
 
-            # Serialize the posts
+            other_info = []
+
+            for v in all_posts:
+                other_info.append({
+                    "name": v.que_pdf.name,
+                    "sub": v.que_pdf.sub,
+                    "choose": v.que_pdf.choose
+                })
             serializer = UserPostsSerializer(all_posts, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response({
+                "posts": serializer.data,
+                "other_info": other_info
+            }, status=status.HTTP_200_OK)
         
 
         except User.DoesNotExist:
