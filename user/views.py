@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login
+import requests
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -22,11 +23,12 @@ import urllib
 from .models import PasswordResetToken 
 from django.utils.timezone import now
 import time
-from Profile.serializers import profileSerializer
+from Profile.models import profile
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-from vercel_blob import put  # Assuming you have a Vercel Blob storage setup
+from vercel_blob import put  
+from django.core.files.base import ContentFile
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -155,74 +157,90 @@ class GoogleLoginAPIView(APIView):
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Google signup verification view
+
 @method_decorator(csrf_exempt, name='dispatch')
 class GoogleSignupAPIView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         token = request.data.get('token')
         if not token:
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify the token
+            # Verify token
             idinfo = id_token.verify_oauth2_token(
                 token,
                 Request(),
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
             email = idinfo.get('email')
-            username=idinfo.get('name', email.split('@')[0])
-            if User.objects.filter(username=username).exists():
-                username = email.split('@')[0].lower()
+            username = idinfo.get('name', email.split('@')[0])
             first_name = idinfo.get('given_name', '')
             last_name = idinfo.get('family_name', '')
-            profile_pic = idinfo.get('picture', '')
+            profile_pic_url = idinfo.get('picture', '')
 
-            
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Check if user already exists
-            user, created = User.objects.get_or_create(email=email, defaults={'username': username, 'is_active': False, 'first_name': first_name, 'last_name': last_name})
+            user, created = User.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': username,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'is_active': False
+                }
+            )
+
             if not created:
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Add profile pic
-            serialize_profile = profileSerializer(data={'profile_pic': profile_pic, 'user_obj': user.id})
-            if not serialize_profile.is_valid():
-                return Response(serialize_profile.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Save profile picture from URL
+            profile_pic_file = None
+            if profile_pic_url:
+                try:
+                    response = requests.get(profile_pic_url)
+                    if response.status_code == 200:
+                        profile_pic_file = ContentFile(response.content, name=f"{username}_google.jpg")
+                except Exception as e:
+                    logger.warning(f"Failed to download profile pic: {e}")
+
             # Create profile instance
-            serialize_profile.save()
-        
-            # Set user as active and save
+            profile_instance = profile(user_obj=user)
+            if profile_pic_file:
+                profile_instance.profile_pic.save(profile_pic_file.name, profile_pic_file)
+            profile_instance.save()
+
+            # Set user as active
             user.is_active = True
             user.save()
 
-            # Send welcome email asynchronously
+            # Send welcome email (async)
             try:
                 user_data = RegisterSerializer(user).data
-                send_mail_for_login.apply_async(args=[user_data])
+                # Example celery task
+                # send_mail_for_login.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.username}: {e}")
-            # Login user
+
             login(request, user)
 
-            # ✅ JWT Token generation
             refresh = RefreshToken.for_user(user)
 
-            # ✅ Return fast response
             return Response({
                 "message": "Signup successful!",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh),
-                "username": user_data['username'],
-            }, status=status.HTTP_200_OK)    
+                "username": user.username,
+            }, status=status.HTTP_200_OK)
+
         except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.exception("Google signup failed.")
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 # Login View
 class LoginView(APIView):

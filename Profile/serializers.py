@@ -25,17 +25,19 @@ class CombinedProfileSerializer(serializers.ModelSerializer):
     profile_pic = serializers.SerializerMethodField()
 
     class Meta:
-        model = ProfileModel
+        model = profile
         fields = ['username', 'email', 'joined_date', 'profile_pic']
 
     def get_profile_pic(self, obj):
-        pic_name = obj.profile_pic.name
-        if pic_name.startswith('http') or pic_name.startswith('https'):
-            return unquote(pic_name)
-        try:
-            return obj.profile_pic.url
-        except:
-            return None
+        if obj.profile_pic:
+            pic_name = obj.profile_pic.name
+            if pic_name.startswith('http') or pic_name.startswith('https'):
+                return unquote(pic_name)
+            try:
+                return obj.profile_pic.url
+            except:
+                return None
+        return None
 
 
 # Serializer for user posts (if needed in the future)
