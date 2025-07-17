@@ -6,7 +6,7 @@ from Profile.models import profile as ProfileModel
 from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
-from vercel_blob import delete  as del_
+from vercel_blob import delete  as del_, put
 
 
 class ProfileDetailsView(APIView):
@@ -121,6 +121,8 @@ class EditProfileView(APIView):
 
             # ✅ Update profile_pic if provided
             if profile_pic:
+                blob = put(f"Profile/{profile_pic}", profile_pic.read())
+                profile_pic = blob["url"]
                 serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
                 if serializer.is_valid():
                     serializer.save()
