@@ -17,6 +17,29 @@ class profileSerializer(serializers.ModelSerializer):
         return profile.objects.create(**validated_data) 
 
 
+# Combined serializer for user and profile details
+class CombinedProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user_obj.username')
+    email = serializers.EmailField(source='user_obj.email')
+    joined_date = serializers.DateTimeField(source='user_obj.date_joined', format='%Y-%m-%d')
+    profile_pic = serializers.SerializerMethodField()
+
+    class Meta:
+        model = profile
+        fields = ['username', 'email', 'joined_date', 'profile_pic']
+
+    def get_profile_pic(self, obj):
+        if obj.profile_pic:
+            pic_name = obj.profile_pic.name
+            if pic_name.startswith('http') or pic_name.startswith('https'):
+                return unquote(pic_name)
+            try:
+                return obj.profile_pic.url
+            except:
+                return None
+        return None
+
+
 # Serializer for user posts (if needed in the future)
 class UserPostsSerializer(serializers.ModelSerializer):
     class Meta:
