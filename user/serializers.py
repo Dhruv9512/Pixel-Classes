@@ -9,22 +9,38 @@ class LoginSerializer(serializers.Serializer):
 
 # Serializer for Register
 class RegisterSerializer(serializers.ModelSerializer):
+    profile_pic = serializers.URLField(required=False, write_only=True)
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password','id']
+        fields = [
+            'id',
+            'username',
+            'email',
+            'password',
+            'first_name',
+            'last_name',
+            'is_active',
+            'profile_pic',  # not actually part of the model, but used in create()
+        ]
+        extra_kwargs = {
+            'password': {'write_only': True},
+            'is_active': {'required': False}
+        }
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
-        )
-        ProfileModel.objects.create(
-            user_obj=user,
-            profile_pic=validated_data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
-        )
-        user.is_active = False
+        # Pop profile_pic before creating the user (since it's not part of the User model)
+        profile_pic = validated_data.pop('profile_pic', "https://default.pic.url/here.webp")
+
+        # Extract and set password securely
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
         user.save()
+
+        # Create related profile
+        ProfileModel.objects.create(user_obj=user, profile_pic=profile_pic)
+
         return user
     
 class OTPSerializer(serializers.Serializer):

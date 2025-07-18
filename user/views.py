@@ -183,41 +183,26 @@ class GoogleSignupAPIView(APIView):
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Check if user already exists
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    'username': username,
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'is_active': False
-                }
-            )
-
-            if not created:
+            # Use RegisterSerializer to create user + profile
+            serializer = RegisterSerializer(data={
+                'username': username,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'is_active': False,
+                'profile_pic': profile_pic_url
+            })
+            if serializer.is_valid():
+                user = serializer.save()
+            else:
                 return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Save profile picture if provided
-            if profile_pic_url:
-                serializer = CombinedProfileSerializer(
-                    data={
-                        'user_obj': user,
-                        'profile_pic': profile_pic_url
-                    }
-                )
-                if serializer.is_valid():
-                    serializer.save()
-
-
-            # Set user as active
-            user.is_active = True
-            user.save()
 
             # Send welcome email (async)
             try:
-                user_data = RegisterSerializer(user).data
+                user_data = serializer.data
                 # Example celery task
-                # send_mail_for_login.apply_async(args=[user_data])
+                send_mail_for_login.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.username}: {e}")
 
@@ -237,6 +222,7 @@ class GoogleSignupAPIView(APIView):
         except Exception as e:
             logger.exception("Google signup failed.")
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # Login View
 class LoginView(APIView):
