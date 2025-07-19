@@ -17,30 +17,27 @@ class RegisterSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
-            'password',
             'first_name',
             'last_name',
             'is_active',
         ]
         extra_kwargs = {
-            'password': {'write_only': True},
             'is_active': {'required': False}
         }
 
     def create(self, validated_data):
-        # Pop profile_pic before creating the user (since it's not part of the User model)
+        # Extract profile pic
         profile_pic = validated_data.pop('profile_pic', "https://default.pic.url/here.webp")
 
-        # Extract and set password securely
-        password = validated_data.pop('password')
+        # Create user without password
         user = User(**validated_data)
-        user.set_password(password)
         user.save()
 
-        # Create related profile
+        # Create user profile
         ProfileModel.objects.create(user_obj=user, profile_pic=profile_pic)
 
         return user
+
     
 class OTPSerializer(serializers.Serializer):
     otp = serializers.CharField(min_length=6, max_length=6)
