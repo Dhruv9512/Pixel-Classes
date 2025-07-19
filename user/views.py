@@ -195,7 +195,7 @@ class GoogleSignupAPIView(APIView):
             if serializer.is_valid():
                 user = serializer.save()
             else:
-                return Response({"error": "User already exists. Please login."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
             # Send welcome email (async)

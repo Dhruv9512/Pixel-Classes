@@ -21,7 +21,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             'first_name',
             'last_name',
             'is_active',
-            'profile_pic',  # not actually part of the model, but used in create()
         ]
         extra_kwargs = {
             'password': {'write_only': True},
