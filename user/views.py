@@ -180,8 +180,14 @@ class GoogleSignupAPIView(APIView):
             last_name = idinfo.get('family_name', '')
             profile_pic_url = idinfo.get('picture', '')
 
+            email = idinfo.get('email')
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Prevent duplicate user
+            if User.objects.filter(email=email).exists():
+                return Response({"error": "User already exists. Please log in."}, status=status.HTTP_400_BAD_REQUEST)
+
 
             # Use RegisterSerializer to create user + profile
             serializer = RegisterSerializer(data={

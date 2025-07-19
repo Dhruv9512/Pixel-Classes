@@ -14,17 +14,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id',
             'username',
             'email',
             'first_name',
             'last_name',
             'is_active',
         ]
-        extra_kwargs = {
-            'is_active': {'required': False}
-        }
-
+    
     def create(self, validated_data):
         # Extract profile pic
         profile_pic = validated_data.pop('profile_pic', "https://default.pic.url/here.webp")
