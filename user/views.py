@@ -168,52 +168,53 @@ class GoogleSignupAPIView(APIView):
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify token
+            # ✅ Verify token
             idinfo = id_token.verify_oauth2_token(
                 token,
                 Request(),
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
-            email = idinfo.get('email')
-            username = idinfo.get('name', email.split('@')[0])
-            first_name = idinfo.get('given_name', '')
-            last_name = idinfo.get('family_name', '')
-            profile_pic_url = idinfo.get('picture', '')
 
             email = idinfo.get('email')
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Prevent duplicate user
+            # ✅ Prevent duplicate email
             if User.objects.filter(email=email).exists():
                 return Response({"error": "User already exists. Please log in."}, status=status.HTTP_400_BAD_REQUEST)
 
+            # ✅ Handle duplicate usernames
+            base_username = idinfo.get('name', email.split('@')[0]).replace(" ", "_")
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}_{counter}"
+                counter += 1
 
-            # Use RegisterSerializer to create user + profile
+            # ✅ Set up user data
             serializer = RegisterSerializer(data={
                 'username': username,
                 'email': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'is_active': False,
-                'profile_pic': profile_pic_url
+                'first_name': idinfo.get('given_name', ''),
+                'last_name': idinfo.get('family_name', ''),
+                'is_active': True,
+                'profile_pic': idinfo.get('picture', '')
             })
+
+            # ✅ Validate & Save
             if serializer.is_valid():
                 user = serializer.save()
             else:
                 return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-
-            # Send welcome email (async)
+            # ✅ Optional: Send welcome email
             try:
-                user_data = serializer.data
-                # Example celery task
-                send_mail_for_login.apply_async(args=[user_data])
+                send_mail_for_login.apply_async(args=[serializer.data])
             except Exception as e:
                 logger.warning(f"Email send failed for {user.username}: {e}")
 
+            # ✅ Log in user & send tokens
             login(request, user)
-
             refresh = RefreshToken.for_user(user)
 
             return Response({

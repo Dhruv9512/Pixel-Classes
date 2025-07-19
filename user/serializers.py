@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from Profile.models import profile as ProfileModel
+from Profile.models import profile
 # Serializer for Login
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, required=True)
@@ -9,28 +9,29 @@ class LoginSerializer(serializers.Serializer):
 
 # Serializer for Register
 class RegisterSerializer(serializers.ModelSerializer):
-    profile_pic = serializers.URLField(required=False, write_only=True)
+    profile_pic = serializers.CharField(required=False, write_only=True)
 
     class Meta:
         model = User
         fields = [
+            'id',
             'username',
             'email',
             'first_name',
             'last_name',
             'is_active',
+            'profile_pic',  
         ]
-    
+
     def create(self, validated_data):
-        # Extract profile pic
-        profile_pic = validated_data.pop('profile_pic', "https://default.pic.url/here.webp")
+        # Extract profile_pic (use default if not provided)
+        profile_pic = validated_data.pop('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
 
-        # Create user without password
-        user = User(**validated_data)
-        user.save()
+        # Create the User (without setting password)
+        user = User.objects.create(**validated_data)
 
-        # Create user profile
-        ProfileModel.objects.create(user_obj=user, profile_pic=profile_pic)
+        # Create associated profile
+        profile.objects.create(user_obj=user, profile_pic=profile_pic)
 
         return user
 
