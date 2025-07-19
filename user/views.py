@@ -538,7 +538,7 @@ class SendCuteEmail(APIView):
         try:
             # Email details
             subject = "Welcome to Pixel, with Love"
-            recipient_email = ["mitsuhamitsuha123@gmail.com"]
+            recipient_email = ["dhruvsharma56780@gmail.com"]
             message = render_to_string('Signup/mitsuha.html')
             
             # ✅ Try sending email

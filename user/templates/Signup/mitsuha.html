@@ -1,174 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Happy Birthday 🎉</title>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Great+Vibes&family=Quicksand:wght@400;600&display=swap");
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>I’m Really Sorry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom right, #ffe4ec, #ffe0f0);
+      font-family: 'Open Sans', sans-serif;
+      overflow-x: hidden;
+    }
 
-      * {
-        box-sizing: border-box;
+    .container {
+      max-width: 700px;
+      margin: 60px auto;
+      background-color: #ffffffc7;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      font-family: 'Great Vibes', cursive;
+      font-size: 3em;
+      color: #d81b60;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-size: 1.2em;
+      color: #4a148c;
+      line-height: 1.8;
+      margin: 20px 0;
+    }
+
+    .footer {
+      margin-top: 30px;
+    }
+
+    .footer a {
+      background-color: #d81b60;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 1.1em;
+      transition: background 0.3s ease;
+    }
+
+    .footer a:hover {
+      background-color: #ad1457;
+    }
+
+    /* Animated hearts */
+    .hearts {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: -1;
+    }
+
+    .heart {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Heart_corazón.svg/1024px-Heart_corazón.svg.png') no-repeat center center;
+      background-size: contain;
+      animation: float 6s linear infinite;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) scale(1);
+        opacity: 0;
       }
-
-      body {
-        margin: 0;
-        padding: 0;
-        background: #000;
-        font-family: "Quicksand", sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        padding: 20px;
+      50% {
+        opacity: 1;
       }
-
-      .card {
-        max-width: 650px;
-        width: 100%;
-        background: #1c1c1c;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(255, 105, 180, 0.2);
-        padding: 30px;
-        position: relative;
-        overflow: hidden;
-        border: 3px solid #ffb6c1;
-        color: #fff;
-        text-align: center;
+      100% {
+        transform: translateY(-100vh) scale(1.5);
+        opacity: 0;
       }
+    }
+  </style>
+</head>
+<body>
 
-      .card::before {
-        content: "🎂";
-        font-size: 5rem;
-        position: absolute;
-        top: -20px;
-        left: -20px;
-        opacity: 0.03;
-        transform: rotate(-30deg);
-      }
+  <div class="hearts">
+    <!-- Multiple heart elements -->
+    <div class="heart" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="heart" style="left: 30%; animation-delay: 1.2s;"></div>
+    <div class="heart" style="left: 50%; animation-delay: 2.4s;"></div>
+    <div class="heart" style="left: 70%; animation-delay: 0.8s;"></div>
+    <div class="heart" style="left: 90%; animation-delay: 1.6s;"></div>
+  </div>
 
-      h1 {
-        font-family: "Great Vibes", cursive;
-        font-size: 2.8rem;
-        color: #ff69b4;
-        margin-bottom: 10px;
-      }
+  <div class="container">
+    <h1>💔 Sorry Nushu...</h1>
 
-      p {
-        font-size: 1rem;
-        color: #ddd;
-        line-height: 1.8;
-        margin-bottom: 20px;
-      }
+    <p><strong>Jo dil ne kabhi chaha hi nahi,</strong><br />
+    woh gusse mein zubaan keh gayi,<br />
+    <strong>Par har us lafz ke baad,</strong><br />
+    meri rooh bhi khamoshi se ro gayi.</p>
 
-      .buttons {
-        display: flex;
-        flex-direction: column; /* stacked vertically always */
-        align-items: center;
-        gap: 15px;
-        margin-top: 25px;
-        width: 100%;
-      }
+    <p><strong>Mana bewakoof hoon,</strong><br />
+    teri baat samajh na paata hoon,<br />
+    <strong>Ladta hoon tujhse,</strong><br />
+    kyunki tujhe hi toh apna manta hoon.</p>
 
-      .button {
-        text-decoration: none;
-        background-color: #ff69b4;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 30px;
-        font-weight: bold;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(255, 105, 180, 0.3);
-        width: 100%;
-        max-width: 250px;
-        text-align: center;
-      }
+    <p><strong>Chubh gaye jo alfaaz,</strong><br />
+    unpe maafi chahta hoon,<br />
+    <strong>Jo lamhe rulaye,</strong><br />
+    unhe pyaar se mita de tu.</p>
 
-      .button:hover {
-        background-color: #e91e63;
-        transform: scale(1.05);
-      }
+    <p><strong>Teri yaadon ka hi ab sahaara hai,</strong><br />
+    Tere bina toh waqt bhi thama thama sa lagta hai.</p>
 
-      .footer {
-        margin-top: 30px;
-        font-size: 0.9rem;
-        color: #aaa;
-        font-family: "Great Vibes", cursive;
-        text-align: center;
-      }
-
-      @media (max-width: 480px) {
-        .card {
-          text-align: left;
-        }
-
-        h1,
-        p {
-          text-align: left;
-        }
-
-        h1 {
-          font-size: 2.2rem;
-        }
-
-        p {
-          font-size: 0.9rem;
-        }
-
-        .button {
-          padding: 13px 21px;
-          font-size: 0.95rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>💖 Happy Birthday, Nushu! 🎉</h1>
-
-      <p>
-        Main itna talented nahi hoon ki kuch achha likh paun, par badi mehnat
-        karke ye shayari banayi hai aur ChatGPT se poetic words liye hain, to ek
-        baar padh lena. 😊
-      </p>
-
-      <p>
-        Saadgi basti hai aankhon mein teri,<br />
-        Tere chehre pe muskaan sajti hai. <br />
-        Na jaane kya raaz hai teri har ada mein, <br />
-        Har nazar bas tujh par hi rukti hai. <br /><br />
-        In nazron se khuda tujhe mehfooz rakhe, <br />
-        Har khushi se tera daaman bhare. <br />
-        Yahi dua maangi hai maine, <br />
-        Tere is janamdin mein. 🎂✨
-      </p>
-
-      <table cellpadding="0" cellspacing="0" width="100%" style="margin-top: 30px;">
-            <tr>
-              <td align="center" style="padding-bottom: 15px;">
-                <a href="https://happy-birthday-rouge-delta.vercel.app/" target="_blank"
-                  style="display: inline-block; background-color: #ff69b4; color: #ffffff; text-decoration: none; padding: 14px 25px; border-radius: 30px; font-weight: bold; font-size: 16px;">
-                  🌐 Click Me
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td align="center">
-                <a href="https://ik.imagekit.io/pxc/WhatsApp%20Video%202025-05-15%20at%2016.26.51_6f633a02.mp4" download
-                  style="display: inline-block; background-color: #ff69b4; color: #ffffff; text-decoration: none; padding: 14px 25px; border-radius: 30px; font-weight: bold; font-size: 16px;">
-                  📥 Download Birthday Video
-                </a>
-              </td>
-            </tr>
-          </table>
-
-
-
-      <div class="footer">
-        With love,<br />
-        <strong>Dhruv Sharma</strong><br />
-        Co-Founder, Pixel 💜
-      </div>
+    <div class="footer">
+      <a href="https://sorry-omega-seven.vercel.app/" target="_blank">Click Here ❤️</a>
     </div>
-  </body>
+  </div>
+
+</body>
 </html>
