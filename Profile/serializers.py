@@ -29,15 +29,21 @@ class CombinedProfileSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'joined_date', 'profile_pic']
 
     def get_profile_pic(self, obj):
-        if obj.profile_pic:
-            pic_name = obj.profile_pic.name
-            if pic_name.startswith('http') or pic_name.startswith('https'):
-                return unquote(pic_name)
-            try:
-                return obj.profile_pic.url
-            except:
-                return None
-        return None
+        pic = obj.profile_pic
+        if not pic:
+            return None
+        # If already a URL or path string
+        if isinstance(pic, str):
+            if pic.startswith('http') or pic.startswith('https'):
+                return unquote(pic)
+            return pic
+        # If it's a FileField/ImageField
+        try:
+            if pic.name.startswith('http') or pic.name.startswith('https'):
+                return unquote(pic.name)
+            return pic.url
+        except Exception:
+            return None
 
 
 # Serializer for user posts (if needed in the future)
