@@ -4,7 +4,7 @@ from rest_framework import serializers
 from Profile.models import profile as ProfileModel
 from urllib.parse import unquote
 from home.models import AnsPdf
-
+from django.contrib.auth.models import User
 
 # Serializer for the profile model
 class profileSerializer(serializers.ModelSerializer):
@@ -57,3 +57,21 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = profile
         fields = ['profile_pic']
+
+
+
+
+class UserSearchSerializer(serializers.ModelSerializer):
+    profile_pic = serializers.SerializerMethodField()
+    joined_date = serializers.DateTimeField(source='date_joined', format='%Y-%m-%d')
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'joined_date', 'profile_pic']
+
+    def get_profile_pic(self, obj):
+        try:
+            profile = ProfileModel.objects.get(user_obj=obj)
+            return profile.profile_pic if profile.profile_pic else None
+        except ProfileModel.DoesNotExist:
+            return None

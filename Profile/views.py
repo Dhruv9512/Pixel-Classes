@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from Profile.serializers import CombinedProfileSerializer,UserPostsSerializer,ProfileUpdateSerializer
+from Profile.serializers import CombinedProfileSerializer,UserPostsSerializer,ProfileUpdateSerializer, UserSearchSerializer
 from Profile.models import profile as ProfileModel
 from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
@@ -150,3 +150,22 @@ class EditProfileView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+
+
+# create a user search view
+class UserSearchView(APIView):
+    def get(self, request):
+        try:
+            username = request.data.get('username')
+            if not username:
+                return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects.filter(username__icontains=username).first()
+            if not user:
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = UserSearchSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
