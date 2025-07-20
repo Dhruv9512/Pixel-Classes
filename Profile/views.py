@@ -156,16 +156,11 @@ class EditProfileView(APIView):
 class UserSearchView(APIView):
     def get(self, request):
         try:
-            username = request.data.get('username')
-            if not username:
-                return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-            user = User.objects.filter(username__icontains=username).first()
-            if not user:
-                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-            serializer = UserSearchSerializer(user)
+            users = User.objects.all()
+            serializer = UserSearchSerializer(users, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+# create 

@@ -75,3 +75,6 @@ class UserSearchSerializer(serializers.ModelSerializer):
             return profile.profile_pic if profile.profile_pic else None
         except ProfileModel.DoesNotExist:
             return None
+
+
+
