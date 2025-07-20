@@ -9,7 +9,7 @@ from django.utils.decorators import method_decorator
 from vercel_blob import put
 from rest_framework.parsers import MultiPartParser, FormParser
 from dotenv import load_dotenv
-
+from .models import get_current_date, get_current_time
 # Load environment variables
 load_dotenv()
 
@@ -163,3 +163,49 @@ class AnsPdfView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+# Adding in que pdf table
+
+@method_decorator(csrf_exempt, name="dispatch")
+class QuePdfAddView(APIView):
+    def post(self, request):
+        try:
+            name = request.data.get("name")
+            sub = request.data.get("sub")
+            choose = request.data.get("choose")
+            sem = request.data.get("sem") 
+            pdf = request.FILES.get("pdf")
+            course_id = request.data.get("course_id", 1)  
+            # Upload PDF to blob storage
+            try:
+                blob = put(f"QuePdf/{choose}/sem {sem}/{pdf.name}", pdf.read())
+                print(f"✅ File uploaded successfully: {blob['url']}")
+            except Exception as upload_error:
+                print(f"❌ Upload error: {upload_error}")
+                return Response(
+                    {"error": f"Upload failed: {str(upload_error)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            serializer = QuePdfSerializer(data={
+                "name": name,
+                "sub": sub,
+                "choose": choose,
+                "sem": sem,
+                "pdf": blob["url"],
+                "dateCreated": get_current_date(),
+                "timeCreated": get_current_time(),
+                "year": 2025,
+                "div": "all",
+                "course": course_id,  
+            })
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
