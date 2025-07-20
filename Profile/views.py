@@ -43,20 +43,23 @@ class userPostsView(APIView):
             username = request.data.get('username')
           
             # Fetch posts related to the user
-            all_posts = AnsPdf.objects.filter(name=username)
+            posts = AnsPdf.objects.filter(name=username)
+            serializer = UserPostsSerializer(posts, many=True)
 
-            other_info = []
+            all_posts = []
 
-            for v in all_posts:
-                other_info.append({
+            for i,v in enumerate(posts):
+                all_posts.append({
                     "name": v.que_pdf.name,
                     "sub": v.que_pdf.sub,
-                    "choose": v.que_pdf.choose
+                    "choose": v.que_pdf.choose,
+                    "sem": v.que_pdf.sem,
                 })
-            serializer = UserPostsSerializer(all_posts, many=True)
+                for key, value in serializer.data[i].items():
+                    all_posts[i][key] = value
+
             return Response({
-                "posts": serializer.data,
-                "other_info": other_info
+                "posts": all_posts,
             }, status=status.HTTP_200_OK)
         
 
