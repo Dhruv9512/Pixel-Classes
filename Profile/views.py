@@ -124,8 +124,8 @@ class EditProfileView(APIView):
 
             # ✅ Update username if provided
             if User.objects.filter(username=new_username).exists():
-                    user.username = new_username
-            user.save()
+                user.username = new_username
+                user.save()
           
 
             # ✅ Update profile_pic if provided
