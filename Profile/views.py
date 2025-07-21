@@ -101,48 +101,46 @@ class UserPostDeleteView(APIView):
 class EditProfileView(APIView):
     def put(self, request):
         try:
-            old_username = request.data.get('old_username')
+            username = request.data.get('username')
             new_username = request.data.get('new_username')
-            profile_pic = request.FILES.get('profile_pic')  # For multipart form-data
+            profile_pic = request.FILES.get('profile_pic') 
 
-            if not old_username:
+            if not username:
                 return Response({"error": "Old username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Get user and profile
-            user = User.objects.get(username=old_username)
+            user = User.objects.get(username=username)
             profile_obj = ProfileModel.objects.get(user_obj=user)
 
-            changes_made = False
 
             # ✅ Update username if provided
-            if new_username:
-                if User.objects.filter(username=new_username).exclude(id=user.id).exists():
-                    return Response({"error": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
-                user.username = new_username
-                user.save()
-                changes_made = True
+            if User.objects.filter(username=new_username).exists():
+                    user.username = new_username
+            user.save()
+          
 
             # ✅ Update profile_pic if provided
-            if profile_pic:
-                blob = put(f"Profile/{profile_pic}", profile_pic.read())
-                profile_pic = blob["url"]
-                serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    changes_made = True
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            old_profile_pic_url = profile_obj.profile_pic 
+            blob = put(f"Profile/{profile_pic}", profile_pic.read())
+            profile_pic = blob["url"]
+            serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
+            if serializer.is_valid():
+                parsed_url = urlparse(old_profile_pic_url)
+                blob_path = unquote(parsed_url.path.lstrip('/'))
+                del_(blob_path)
+             
+                profile_obj.profile_pic = profile_pic
+                profile_obj.save()    
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             # ✅ Return appropriate message
-            if changes_made:
-                return Response({
-                    "message": "Profile updated successfully",
-                    "new_username": user.username,
-                    "profile_pic_url": profile_obj.profile_pic.url if profile_obj.profile_pic else None
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "No changes were made"}, status=status.HTTP_200_OK)
-
+            return Response({
+                "message": "Profile updated successfully",
+                "new_username": user.username,
+                "profile_pic_url": profile_obj.profile_pic if profile_obj.profile_pic else None
+            }, status=status.HTTP_200_OK)
+          
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except ProfileModel.DoesNotExist:
@@ -162,5 +160,3 @@ class UserSearchView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
-# create 
