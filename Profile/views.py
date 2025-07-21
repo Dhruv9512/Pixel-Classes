@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
 from vercel_blob import delete  as del_, put
-
+from .models import Follow
 
 class ProfileDetailsView(APIView):
     def post(self, request):
@@ -25,7 +25,16 @@ class ProfileDetailsView(APIView):
 
             # Use serializer to build response
             serializer = CombinedProfileSerializer(profile_obj)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+
+            # Add follower/following count
+            follow_obj = Follow.objects.get(user=user)
+            follower_count = follow_obj.followers.count()
+            following_count = follow_obj.following.count()
+
+            data = serializer.data
+            data['follower_count'] = follower_count
+            data['following_count'] = following_count
+            return Response(data, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -160,3 +169,89 @@ class UserSearchView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+
+# followe view
+class FollowView(APIView):
+    def post(self, request):
+        try:
+            username = request.data.get('username')
+            follow_username = request.data.get('follow_username')
+
+            if not username or not follow_username:
+                return Response({"error": "Both usernames are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects.get(username=username)
+            follow_user = User.objects.get(username=follow_username)
+
+            # Get or create Follow instance
+            user_follow_obj, _ = Follow.objects.get_or_create(user=user)
+            follow_user_obj, _ = Follow.objects.get_or_create(user=follow_user)
+
+            user_follow_obj.following.add(follow_user_obj)
+
+            return Response({"message": f"{username} is now following {follow_username}"}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "One or both users not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+           
+class UnfollowView(APIView):
+    def post(self, request):
+        try:
+            username = request.data.get('username')
+            unfollow_username = request.data.get('unfollow_username')
+
+            if not username or not unfollow_username:
+                return Response({"error": "Username and unfollow_username are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = Follow.objects.get(username=username)
+            unfollow_user = Follow.objects.get(username=unfollow_username)
+
+
+            # Remove follow logic here (e.g., update a ManyToMany field in ProfileModel)
+            user.following.remove(unfollow_user)
+
+            return Response({"message": f"Unfollowed {unfollow_username}"}, status=status.HTTP_200_OK)
+
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class FollowersView(APIView):
+    def post(self, request):
+        try:
+            username = request.data.get('username')
+            user = User.objects.get(username=username)
+            follow_obj = Follow.objects.get(user=user)
+            followers = follow_obj.followers.all()
+            followers_users = [f.user for f in followers]
+            serializer = UserSearchSerializer(followers_users, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Follow.DoesNotExist:
+            return Response({"error": "Follow object not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class FollowingView(APIView):
+    def post(self, request):
+        try:
+            username = request.data.get('username')
+            user = User.objects.get(username=username)
+            follow_obj = Follow.objects.get(user=user)
+            following = follow_obj.following.all()
+            following_users = [f.user for f in following]
+            serializer = UserSearchSerializer(following_users, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Follow.DoesNotExist:
+            return Response({"error": "Follow object not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

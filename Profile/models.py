@@ -13,10 +13,6 @@ class profile(models.Model):
         return self.user_obj.username
     
 
-# class Follow(models.Model):
-#     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following_set')
-#     following = models.ForeignKey(User, on_delete=models.CASCADE, related_name='follower_set')
-#     created_at = models.DateTimeField(auto_now_add=True)
-
-#     class Meta:
-#         unique_together = ('follower', 'following')  
+class Follow(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    following = models.ManyToManyField('self', symmetrical=False, related_name='followers')  

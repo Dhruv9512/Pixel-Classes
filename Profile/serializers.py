@@ -76,5 +76,3 @@ class UserSearchSerializer(serializers.ModelSerializer):
         except ProfileModel.DoesNotExist:
             return None
 
-
-
