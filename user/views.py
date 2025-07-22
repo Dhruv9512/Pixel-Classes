@@ -193,7 +193,7 @@ class GoogleSignupAPIView(APIView):
 
             # ✅ Set up user data
             serializer = RegisterSerializer(data={
-                'username': username,
+                'username': username.lower(),
                 'email': email,
                 'first_name': idinfo.get('given_name', ''),
                 'last_name': idinfo.get('family_name', ''),

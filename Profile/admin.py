@@ -9,4 +9,9 @@ class profileAdmin(admin.ModelAdmin):
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
-    list_display = ('user', 'following')
+    list_display = ('user', 'get_following')
+
+    def get_following(self, obj):
+        return ", ".join([user.username for user in obj.following.all()])
+
+    get_following.short_description = 'Following'
