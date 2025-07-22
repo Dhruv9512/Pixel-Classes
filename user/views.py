@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer, PasswordResetSerializer
+from .serializers import LoginSerializer, RegisterSerializer, OTPSerializer, PasswordResetSerializer, ManualRegisterSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.urls import reverse
 from django.conf.global_settings import EMAIL_HOST_USER
@@ -304,6 +304,8 @@ class RegisterView(APIView):
             email = request.data.get('email')
             username = request.data.get('username')
             profile_pic = request.data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
+            course = request.data.get('course', "B.C.A")
+
             if not profile_pic == "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
                 blob = put(f"Profile/{profile_pic}", profile_pic.read())
                 profile_pic = blob["url"]
@@ -318,7 +320,7 @@ class RegisterView(APIView):
                 return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate and save user
-            serializer = RegisterSerializer(data=request.data)
+            serializer = ManualRegisterSerializer(data=request.data)
             if not serializer.is_valid():
                 logger.error(f"User serializer validation failed: {serializer.errors}")
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -327,7 +329,7 @@ class RegisterView(APIView):
 
             # Send email asynchronously
             try:
-                user_data = RegisterSerializer(user).data
+                user_data = serializer.data
                 send_mail_for_register.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email sending failed during registration: {str(e)}")
