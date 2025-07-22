@@ -205,21 +205,25 @@ class UnfollowView(APIView):
 
             if not username or not unfollow_username:
                 return Response({"error": "Username and unfollow_username are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Get User instances
             user = User.objects.get(username=username)
-            user = Follow.objects.get(user =user)
-            unfollow_user = Follow.objects.get(username=unfollow_username)
+            unfollow_user = User.objects.get(username=unfollow_username)
 
+            # Get Follow instance for user
+            follow_instance = Follow.objects.get(user=user)
 
-            # Remove follow logic here (e.g., update a ManyToMany field in ProfileModel)
-            user.following.remove(unfollow_user)
+            # Remove following
+            follow_instance.following.remove(unfollow_user)
 
             return Response({"message": f"Unfollowed {unfollow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Follow.DoesNotExist:
+            return Response({"error": "Follow relationship not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
 class FollowersView(APIView):
     def post(self, request):
