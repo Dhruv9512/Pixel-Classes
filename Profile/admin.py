@@ -12,6 +12,7 @@ class FollowAdmin(admin.ModelAdmin):
     list_display = ('user', 'get_following')
 
     def get_following(self, obj):
-        return ", ".join([user.username for user in obj.following.all()])
+        return ", ".join([follow.user.username for follow in obj.following.all()])
 
     get_following.short_description = 'Following'
+
