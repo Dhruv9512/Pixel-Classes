@@ -205,8 +205,8 @@ class UnfollowView(APIView):
 
             if not username or not unfollow_username:
                 return Response({"error": "Username and unfollow_username are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-            user = Follow.objects.get(username=username)
+            user = User.objects.get(username=username)
+            user = Follow.objects.get(user =user)
             unfollow_user = Follow.objects.get(username=unfollow_username)
 
 
