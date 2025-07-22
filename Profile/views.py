@@ -209,8 +209,11 @@ class UnfollowView(APIView):
             user = User.objects.get(username=username)
             unfollow_user = User.objects.get(username=unfollow_username)
 
+            # Get Follow objects
             follow_instance = Follow.objects.get(user=user)
-            follow_instance.following.remove(unfollow_user)
+            unfollow_follow_instance = Follow.objects.get(user=unfollow_user)
+        
+            follow_instance.following.remove(unfollow_follow_instance)
 
             return Response({"message": f"Unfollowed {unfollow_username}"}, status=status.HTTP_200_OK)
 
