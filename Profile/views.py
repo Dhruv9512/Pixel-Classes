@@ -27,9 +27,13 @@ class ProfileDetailsView(APIView):
             serializer = CombinedProfileSerializer(profile_obj)
 
             # Add follower/following count
-            follow_obj = Follow.objects.get(user=user)
-            follower_count = follow_obj.followers.count()
-            following_count = follow_obj.following.count()
+            try:
+                follow_obj = Follow.objects.get(user=user)
+                follower_count = follow_obj.followers.count()
+                following_count = follow_obj.following.count()
+            except Follow.DoesNotExist:
+                follower_count = 0
+                following_count = 0
 
             data = serializer.data
             data['follower_count'] = follower_count
