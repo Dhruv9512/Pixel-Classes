@@ -305,9 +305,15 @@ class RegisterView(APIView):
             username = request.data.get('username')
             profile_pic = request.data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
             course = request.data.get('course', "B.C.A")
+            password = request.data.get('password')
 
             if not profile_pic == "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
-                blob = put(f"Profile/{profile_pic}", profile_pic.read(), allow_overwrite=True)
+                blob = put(
+                    f"Profile/{profile_pic.name}",
+                    profile_pic.read(),
+                    {"allowOverwrite": True}
+                )
+
                 profile_pic = blob["url"]
                 
             # Validate email and username uniqueness
@@ -320,12 +326,20 @@ class RegisterView(APIView):
                 return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate and save user
-            serializer = ManualRegisterSerializer(data=request.data)
+               # Use blob URL as profile_pic string
+            data = {
+                "username": username,
+                "email": email,
+                "password": password,
+                "profile_pic": blob["url"],
+                "course": course,
+            }
+            serializer = ManualRegisterSerializer(data=data)
             if not serializer.is_valid():
                 logger.error(f"User serializer validation failed: {serializer.errors}")
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            user = serializer.save()
+            serializer.save()
 
             # Send email asynchronously
             try:
