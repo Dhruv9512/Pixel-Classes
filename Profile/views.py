@@ -116,7 +116,9 @@ class EditProfileView(APIView):
         try:
             username = request.data.get('username')
             new_username = request.data.get('new_username')
-            profile_pic = request.FILES.get('profile_pic') 
+            profile_pic = request.FILES.get('profile_pic')
+            first_name = request.data.get('first_name')
+            last_name = request.data.get('last_name') 
 
             if not username:
                 return Response({"error": "Old username is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -127,25 +129,36 @@ class EditProfileView(APIView):
 
 
             # ✅ Update username if provided
-            if User.objects.filter(username=new_username).exists():
-                user.username = new_username
+            if first_name:
+                user.first_name = first_name
                 user.save()
-          
+            if last_name:
+                user.last_name = last_name
+                user.save()
 
+                
+            if new_username:
+                if User.objects.filter(username=new_username).exists():
+                    user.username = new_username
+                    user.save()
+          
+           
+                
             # ✅ Update profile_pic if provided
-            old_profile_pic_url = profile_obj.profile_pic 
-            blob = put(f"Profile/{profile_pic}", profile_pic.read())
-            profile_pic = blob["url"]
-            serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
-            if serializer.is_valid():
-                parsed_url = urlparse(old_profile_pic_url)
-                blob_path = unquote(parsed_url.path.lstrip('/'))
-                del_(blob_path)
-             
-                profile_obj.profile_pic = profile_pic
-                profile_obj.save()    
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if profile_pic:
+                old_profile_pic_url = profile_obj.profile_pic  
+                blob = put(f"Profile/{profile_pic}", profile_pic.read())
+                profile_pic = blob["url"]
+                serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
+                if serializer.is_valid():
+                    parsed_url = urlparse(old_profile_pic_url)
+                    blob_path = unquote(parsed_url.path.lstrip('/'))
+                    del_(blob_path)
+                
+                    profile_obj.profile_pic = profile_pic
+                    profile_obj.save()    
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             # ✅ Return appropriate message
             return Response({
