@@ -307,7 +307,7 @@ class RegisterView(APIView):
             course = request.data.get('course', "B.C.A")
 
             if not profile_pic == "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
-                blob = put(f"Profile/{profile_pic}", profile_pic.read())
+                blob = put(f"Profile/{profile_pic}", profile_pic.read(), allow_overwrite=True)
                 profile_pic = blob["url"]
                 
             # Validate email and username uniqueness
