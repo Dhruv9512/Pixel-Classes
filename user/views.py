@@ -12,15 +12,16 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth.tokens import default_token_generator
-from .utils import send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
+from .utils import generate_otp, send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
 from datetime import timedelta
+from django.utils import timezone
 from django.core.cache import cache  
 import logging
 from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from django.http import HttpResponse
 import urllib
-from .models import PasswordResetToken 
+from .models import OTP, PasswordResetToken 
 from django.utils.timezone import now
 import time
 from Profile.serializers import CombinedProfileSerializer
@@ -331,7 +332,7 @@ class RegisterView(APIView):
                 "username": username,
                 "email": email,
                 "password": password,
-                "profile_pic": blob["url"],
+                "profile_pic": profile_pic,
                 "course": course,
             }
             serializer = ManualRegisterSerializer(data=data)
@@ -340,10 +341,22 @@ class RegisterView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
             serializer.save()
+            user = User.objects.get(username=username)
+             
+            OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
 
-            # Send email asynchronously
+                
+            OTP.objects.filter(user=user).delete()
+
+             
+            otp = generate_otp()
+            new_otp = OTP.objects.create(user=user, otp=otp)
+
+            logger.info(f"OTP generated for {user.email}: {new_otp.otp}")
+           
             try:
                 user_data = serializer.data
+                user_data["otp"] = otp
                 send_mail_for_register.apply_async(args=[user_data])
             except Exception as e:
                 logger.warning(f"Email sending failed during registration: {str(e)}")
@@ -467,7 +480,7 @@ class PasswordResetConfirmView(APIView):
             return Response({"error": "Could not verify token."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Redirect to frontend password reset page
-        redirect_url = f"https://pixelclass.netlify.app/newpassword/{token}"
+        redirect_url = f"https://pixelclass.netlify.app/auth/password/{token}"
         logger.info(f"Redirecting {user.email} to reset password page")
         return HttpResponseRedirect(redirect_url)
 

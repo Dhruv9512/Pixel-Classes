@@ -138,10 +138,11 @@ class EditProfileView(APIView):
 
                 
             if new_username:
-                if User.objects.filter(username=new_username).exists():
+                if not User.objects.filter(username=new_username).exists():
                     user.username = new_username
                     user.save()
-          
+                else:
+                    return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
            
                 
             # ✅ Update profile_pic if provided
