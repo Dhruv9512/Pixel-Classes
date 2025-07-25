@@ -79,7 +79,7 @@ class VerifyOTPView(APIView):
 
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(aargs = [user_data])
+            send_mail_for_login.apply_async(aargs=[user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
