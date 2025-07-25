@@ -111,6 +111,7 @@ class UserPostDeleteView(APIView):
         
 
 
+
 class EditProfileView(APIView):
     def put(self, request):
         try:
@@ -118,67 +119,66 @@ class EditProfileView(APIView):
             new_username = request.data.get('new_username')
             profile_pic = request.FILES.get('profile_pic')
             first_name = request.data.get('first_name')
-            last_name = request.data.get('last_name') 
+            last_name = request.data.get('last_name')
 
             if not username:
                 return Response({"error": "Old username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Get user and profile
+            # Get user
             user = User.objects.get(username=username)
             profile_obj = ProfileModel.objects.get(user_obj=user)
 
-
-            # ✅ Update username if provided
+            # ✅ Update first and last name
             if first_name:
                 user.first_name = first_name
-                user.save()
             if last_name:
                 user.last_name = last_name
-                user.save()
 
-                
-            if new_username:
-                if not User.objects.filter(username=new_username).exists():
-                    posts= AnsPdf.objects.filter(name=username)
-                    for post in posts:
-                        post.name = new_username
-                        post.save()
-                    user.username = new_username
-                    user.save()
-                else:
+            # ✅ Update username
+            if new_username and new_username != username:
+                if User.objects.filter(username__iexact=new_username).exclude(id=user.id).exists():
                     return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
-           
-                
-            # ✅ Update profile_pic if provided
+
+                # Update AnsPdf records where name matches (case-insensitive)
+                posts = AnsPdf.objects.filter(name=username)
+                for post in posts:
+                    post.name = new_username
+                    post.save()
+
+                user.username = new_username
+
+            # Save user if anything changed
+            user.save()
+
+            # ✅ Update profile pic
             if profile_pic:
-                old_profile_pic_url = profile_obj.profile_pic  
+                old_profile_pic_url = profile_obj.profile_pic
                 blob = put(f"Profile/{profile_pic}", profile_pic.read())
-                profile_pic = blob["url"]
-                serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': profile_pic}, partial=True)
+                new_profile_url = blob["url"]
+
+                serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': new_profile_url}, partial=True)
                 if serializer.is_valid():
+                    # Delete old profile pic from storage
                     parsed_url = urlparse(old_profile_pic_url)
                     blob_path = unquote(parsed_url.path.lstrip('/'))
                     del_(blob_path)
-                
-                    profile_obj.profile_pic = profile_pic
-                    profile_obj.save()    
+
+                    serializer.save()
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            # ✅ Return appropriate message
             return Response({
                 "message": "Profile updated successfully",
                 "new_username": user.username,
                 "profile_pic_url": profile_obj.profile_pic if profile_obj.profile_pic else None
             }, status=status.HTTP_200_OK)
-          
+
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except ProfileModel.DoesNotExist:
             return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
 
 # create a user search view
