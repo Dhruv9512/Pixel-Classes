@@ -54,7 +54,7 @@ class VerifyOTPView(APIView):
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Fetch user from the database by username
-        for _ in range(3):  # Retry fetching in case of a delay
+        for _ in range(4):  # Retry fetching in case of a delay
             try:
                 user = User.objects.get(username=username)
                 break
@@ -63,12 +63,16 @@ class VerifyOTPView(APIView):
         else:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Retrieve the stored OTP from cache
-        stored_otp = cache.get(f"otp_{user.pk}")
+        
 
-        # Check if OTP is available or expired
-        if stored_otp is None:
-            return Response({"error": "OTP expired or not generated."}, status=status.HTTP_400_BAD_REQUEST)
+        for _ in range(4):  # Retry 3 times
+            stored_otp = cache.get(f"otp_{user.pk}")
+            if stored_otp:
+                break
+            time.sleep(0.5)  # Wait for half a second
+
+        if not stored_otp:
+            return Response({"error": "OTP expired or not generated."}, status=400)
 
         # Compare the entered OTP with the stored OTP
         if otp == stored_otp:
@@ -345,7 +349,7 @@ class RegisterView(APIView):
              
             
             otp = generate_otp()
-            cache.set(f"otp_{user.pk}", otp, timeout=300)  # 5 minutes TTL
+            cache.set(f"otp_{user.pk}", otp, timeout=300)  
             try:
                 user_data = serializer.data
                 user_data["otp"] = otp
