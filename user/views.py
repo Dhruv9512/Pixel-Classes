@@ -194,7 +194,7 @@ class GoogleSignupAPIView(APIView):
 
             # ✅ Set up user data
             serializer = RegisterSerializer(data={
-                'username': username.lower(),
+                'username': username,
                 'email': email,
                 'first_name': idinfo.get('given_name', ''),
                 'last_name': idinfo.get('family_name', ''),
@@ -322,9 +322,8 @@ class RegisterView(APIView):
                 logger.warning(f"Registration failed: Email {email} already exists.")
                 return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if User.objects.filter(username=username).exists():
-                logger.warning(f"Registration failed: Username {username} already exists.")
-                return Response({"error": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(username__iexact=username).exclude(id=user.id).exists():
+                    return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate and save user
                # Use blob URL as profile_pic string
