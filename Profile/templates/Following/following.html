@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Follower Alert</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Logo -->
+        <div style="text-align: center;">
+            <img style="width: 200px;" src="https://ik.imagekit.io/pxc/pixel%20class_logo%20pc.png?updatedAt=1735069174018" alt="Pixel Class Logo">
+        </div>
+        
+        <!-- Header -->
+        <div style="text-align: center; background-color: #673AB7; padding: 20px; border-radius: 8px 8px 0 0; color: white;">
+            <h2 style="margin: 0;">🎉 You Have a New Follower!</h2>
+        </div>
+        
+        <!-- Content -->
+        <div style="padding: 20px; font-size: 16px;">
+            <p>Hi <strong>{{ following.username }}</strong>,</p>
+            <p><strong>{{ follower.username }}</strong> has just started following you on <strong>Pixel Classes</strong>!</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ profile_link }}" style="background-color: #673AB7; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                    View Profile 🔍
+                </a>
+            </div>
+
+            <p>Stay connected, explore each other's work, and grow together in your learning journey.</p>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 10px; text-align: center; font-size: 14px; color: #888;">
+            <p>Thanks for being part of <strong>Pixel Class</strong>.</p>
+            <p>Best regards,<br><strong>Pixel Class Team</strong></p>
+        </div>
+    </div>
+</body>
+</html>
