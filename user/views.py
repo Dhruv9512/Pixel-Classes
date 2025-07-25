@@ -47,7 +47,7 @@ class VerifyOTPView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         otp = serializer.validated_data['otp']
-        username = request.data.get('username')  # Get username from request
+        username = request.data.get('username')  
         
         # Ensure username is provided in the request
         if not username:

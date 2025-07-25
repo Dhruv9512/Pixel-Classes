@@ -61,7 +61,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # Installed Apps
 INSTALLED_APPS = [
     'Profile',
-    'corsheaders',  # For CORS handling
+    'corsheaders', 
     'user',
     'home',
     'django.contrib.admin',
@@ -70,7 +70,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',  # Django REST Framework
+    'rest_framework',
+    'rest_framework_simplejwt',
 ]
 
 # Middleware
