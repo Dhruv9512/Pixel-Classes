@@ -139,6 +139,10 @@ class EditProfileView(APIView):
                 
             if new_username:
                 if not User.objects.filter(username=new_username).exists():
+                    posts= AnsPdf.objects.filter(name=username)
+                    for post in posts:
+                        post.name = new_username
+                        post.save()
                     user.username = new_username
                     user.save()
                 else:
