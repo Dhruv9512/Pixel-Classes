@@ -56,7 +56,7 @@ def send_follow_notification(sender, instance, action, pk_set, **kwargs):
                     context = {
                         'follower_username': follower_user.username,
                         'following_username': followed_user.username,
-                        'profile_url': f"https://pixelclass.netlify.app/profile?username={follower_user.username}/",
+                        'profile_url': f"https://pixelclass.netlify.app/profile?username={follower_user.username}",
                         'follower': follower_user.username,
                         'following': followed_user.username,
                         'recipient_email': recipient_email,
