@@ -54,7 +54,7 @@ class VerifyOTPView(APIView):
             return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Fetch user from the database by username
-        for _ in range(4):  # Retry fetching in case of a delay
+        for _ in range(4):  
             try:
                 user = User.objects.get(username=username)
                 break
@@ -63,19 +63,15 @@ class VerifyOTPView(APIView):
         else:
             return Response({"error": "No user found with this username."}, status=status.HTTP_404_NOT_FOUND)
 
+       
+        stored_otp = cache.get(f"otp_{user.pk}")
         
-
-        for _ in range(4):  # Retry 3 times
-            stored_otp = cache.get(f"otp_{user.pk}")
-            if stored_otp:
-                break
-            time.sleep(0.5)  # Wait for half a second
 
         if not stored_otp:
             return Response({"error": "OTP expired or not generated."}, status=400)
 
         # Compare the entered OTP with the stored OTP
-        if otp == stored_otp:
+        if str(otp) == str(stored_otp):
             user.is_active = True  # Activate user account
             user.save()
             cache.delete(f"otp_{user.pk}")  # Remove OTP from cache after verification
