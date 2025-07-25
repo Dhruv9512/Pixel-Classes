@@ -21,7 +21,7 @@ from datetime import timedelta
 from django.shortcuts import HttpResponseRedirect
 from django.http import HttpResponse
 import urllib
-from .models import OTP, PasswordResetToken 
+from .models import PasswordResetToken 
 from django.utils.timezone import now
 import time
 from Profile.serializers import CombinedProfileSerializer
@@ -343,17 +343,9 @@ class RegisterView(APIView):
             serializer.save()
             user = User.objects.get(username=username)
              
-            OTP.objects.filter(user=user, created_at__lt=timezone.now() - timedelta(minutes=5)).delete()
-
-                
-            OTP.objects.filter(user=user).delete()
-
-             
+            
             otp = generate_otp()
-            new_otp = OTP.objects.create(user=user, otp=otp)
-
-            logger.info(f"OTP generated for {user.email}: {new_otp.otp}")
-           
+            cache.set(f"otp_{user.pk}", otp, timeout=300)  # 5 minutes TTL
             try:
                 user_data = serializer.data
                 user_data["otp"] = otp
