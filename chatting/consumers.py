@@ -5,10 +5,19 @@ from django.contrib.auth.models import User
 from channels.db import database_sync_to_async
 from .models import Message
 
+import hashlib
+
+def get_safe_group_name(room_name):
+    # Example: hash 'mann__Dhruv☆' into safe ASCII
+    hashed = hashlib.sha256(room_name.encode()).hexdigest()
+    return f"chat_{hashed}"
+
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
-        self.room_group_name = f'chat_{self.room_name}'
+        raw_room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
+        self.room_name = raw_room_name  # For display or DB
+        self.room_group_name = get_safe_group_name(self.room_name)  # For Channels
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -16,6 +25,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -42,7 +52,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'message': message
             }
         )
-
+        
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'sender': event['sender'],
