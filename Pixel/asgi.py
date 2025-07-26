@@ -8,13 +8,13 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Pixel.settings')
 django.setup()  # ✅ Must be called before importing app code
 
 # Now safe to import app-level modules
-import chattting.routing
+import chatting.routing
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            chattting.routing.websocket_urlpatterns
+            chatting.routing.websocket_urlpatterns
         )
     ),
 })
