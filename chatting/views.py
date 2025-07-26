@@ -7,8 +7,7 @@ from django.db.models import Q
 from django.contrib.auth.models import User
 
 class ChatMessagesView(APIView):
-    permission_classes = [IsAuthenticated]
-
+   
     def get(self, request, room_name):
         query = request.query_params.get('q')
 
