@@ -24,5 +24,5 @@ urlpatterns = [
     path('api/user/', include('user.urls')),  
     path('api/home/', include('home.urls')),
     path('api/Profile/', include('Profile.urls')),
-    path('api/chatting/', include('chattting.urls')),  
+    path('api/chatting/', include('chatting.urls')),  
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     'corsheaders', 
     'user',
     'home',
-    'chattting',  
+    'chatting',  
     'channels',  
     'django.contrib.admin',
     'django.contrib.auth',
