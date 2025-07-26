@@ -5,6 +5,7 @@ from .models import Message
 from .serializers import MessageSerializer
 from django.db.models import Q
 from django.contrib.auth.models import User
+from urllib.parse import unquote
 
 class ChatMessagesView(APIView):
    
@@ -12,8 +13,8 @@ class ChatMessagesView(APIView):
         query = request.query_params.get('q')
 
         try:
-            # Split room name
-            username1, username2 = room_name.split('__')
+            username1, username2 = map(unquote, room_name.split('__'))
+            unquote(username1), unquote(username2) = room_name.split('__')
 
             # Get the user objects
             user1 = User.objects.get(username=username1)
