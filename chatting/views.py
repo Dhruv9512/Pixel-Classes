@@ -18,8 +18,16 @@ class ChatMessagesView(APIView):
             username2 = unquote(username2_enc)
 
             # Get the user objects
-            user1 = User.objects.get(username=username1)
-            user2 = User.objects.get(username=username2)
+            try:
+                user1 = User.objects.get(username=username1)
+            except User.DoesNotExist:
+                return Response({"error": f"User '{username1}' not found"}, status=404)
+
+            try:
+                user2 = User.objects.get(username=username2)
+            except User.DoesNotExist:
+                return Response({"error": f"User '{username2}' not found"}, status=404)
+
 
             # Filter messages where (sender=user1 AND receiver=user2) OR vice versa
             messages = Message.objects.filter(
