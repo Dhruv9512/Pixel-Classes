@@ -1,20 +1,21 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .models import Message
-from .serializers import MessageSerializer
-from django.db.models import Q
 from django.contrib.auth.models import User
+from django.db.models import Q
 from urllib.parse import unquote
 
+from .models import Message
+from .serializers import MessageSerializer
+
 class ChatMessagesView(APIView):
-   
     def get(self, request, room_name):
         query = request.query_params.get('q')
 
         try:
-            username1, username2 = map(unquote, room_name.split('__'))
-            unquote(username1), unquote(username2) = room_name.split('__')
+            # Correctly decode the usernames
+            username1_enc, username2_enc = room_name.split('__')
+            username1 = unquote(username1_enc)
+            username2 = unquote(username2_enc)
 
             # Get the user objects
             user1 = User.objects.get(username=username1)
@@ -39,4 +40,3 @@ class ChatMessagesView(APIView):
 
         except ValueError:
             return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
-
