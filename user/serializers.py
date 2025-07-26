@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from Profile.models import profile
+from Profile.models import profile,Follow
 # Serializer for Login
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, required=True)
@@ -34,6 +34,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Create associated profile
         profile.objects.create(user_obj=user, profile_pic=profile_pic, course=course)
 
+        # create follow user
+        Follow.objects.create(user=user)
         return user
 
 
@@ -65,6 +67,8 @@ class ManualRegisterSerializer(serializers.ModelSerializer):
             profile_pic=profile_pic
         )
 
+        # Create follow user
+        Follow.objects.create(user=user)
         return user
 
 
