@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     'corsheaders', 
     'user',
     'home',
+    'chattting',  
+    'channels',  
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -73,6 +75,14 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
 ]
+
+ASGI_APPLICATION = 'Pixel.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Middleware
 MIDDLEWARE = [

@@ -17,3 +17,5 @@ class profile(models.Model):
 class Follow(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     following = models.ManyToManyField('self', symmetrical=False, related_name='followers')  
+
+    
