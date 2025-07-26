@@ -158,10 +158,12 @@ class EditProfileView(APIView):
 
                 serializer = ProfileUpdateSerializer(profile_obj, data={'profile_pic': new_profile_url}, partial=True)
                 if serializer.is_valid():
-                    # Delete old profile pic from storage
-                    parsed_url = urlparse(old_profile_pic_url)
-                    blob_path = unquote(parsed_url.path.lstrip('/'))
-                    del_(blob_path)
+
+                    if old_profile_pic_url != "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
+                        # Delete old profile pic from storage
+                        parsed_url = urlparse(old_profile_pic_url)
+                        blob_path = unquote(parsed_url.path.lstrip('/'))
+                        del_(blob_path)
 
                     serializer.save()
                 else:
