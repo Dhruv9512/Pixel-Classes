@@ -7,7 +7,9 @@ class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.CharField(source='sender.username', read_only=True)
     receiver = serializers.CharField(source='receiver.username', read_only=True)
     timestamp = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
-
+    seen_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
+    
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'receiver', 'content', 'timestamp']
+        fields = ['id', 'sender', 'receiver', 'content', 'timestamp', 'is_seen', 'seen_at']
+
