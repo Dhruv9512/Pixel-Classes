@@ -6,7 +6,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from .models import Message
 import hashlib
-
+from .task import send_unseen_message_email_task
 
 def get_safe_group_name(room_name):
     # Convert any room name to a safe ASCII string using SHA-256
@@ -98,12 +98,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             raise ValueError(f"Sender '{sender_username}' does not exist.")
         if not receiver:
             raise ValueError(f"Receiver '{receiver_username}' does not exist.")
-
-        return Message.objects.create(
+        
+        # First save the message
+        msg = Message.objects.create(
             sender=sender,
             receiver=receiver,
             content=message
         )
+
+        # Then schedule the task with msg.id
+        send_unseen_message_email_task.apply_async((msg.id,), countdown=20)
+
+        return msg
 
     @database_sync_to_async
     def mark_message_seen(self, message_id):
