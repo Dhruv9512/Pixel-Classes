@@ -7,12 +7,7 @@ from django.utils import timezone
 from .models import Message
 import hashlib
 from .task import send_unseen_message_email_task
-from datetime import datetime
-import pytz
 
-def get_current_datetime():
-    ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist).strftime("%Y-%m-%d %I:%M %p")
 
 def get_safe_group_name(room_name):
     """Convert any room name to a safe ASCII string using SHA-256"""
@@ -23,20 +18,14 @@ def get_safe_group_name(room_name):
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         raw_room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
-        self.room_name = raw_room_name  # Display/DB version
-        self.room_group_name = get_safe_group_name(self.room_name)  # Channels-safe version
+        self.room_name = raw_room_name
+        self.room_group_name = get_safe_group_name(self.room_name)
 
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
         try:
@@ -45,25 +34,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             if event_type == "chat":
                 await self.handle_chat_message(data)
-
             elif event_type == "seen":
                 await self.handle_seen_event(data)
-
             else:
-                await self.send(text_data=json.dumps({
-                    "error": "Invalid event type"
-                }))
+                await self.send(text_data=json.dumps({"error": "Invalid event type"}))
 
         except Exception as e:
-            await self.send(text_data=json.dumps({
-                "error": str(e)
-            }))
+            await self.send(text_data=json.dumps({"error": str(e)}))
 
     async def handle_chat_message(self, data):
         sender_username = data.get('sender')
         receiver_username = data.get('receiver')
         message = data.get('message')
-        temp_id = data.get('tempId') 
+        temp_id = data.get('tempId')
 
         if not sender_username or not receiver_username or not message:
             await self.send(json.dumps({"error": "Missing sender, receiver, or message"}))
@@ -79,10 +62,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': sender_username,
                 'receiver': receiver_username,
                 'message': message,
-                'temp_id': temp_id  
+                'temp_id': temp_id
             }
         )
-
 
     async def handle_seen_event(self, data):
         message_id = data.get('message_id')
@@ -90,13 +72,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.send(json.dumps({"error": "Missing message_id"}))
             return
 
-        await self.mark_message_seen(message_id)
+        seen_at = await self.mark_message_seen(message_id)
 
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'message_seen',
-                'message_id': message_id
+                'message_id': message_id,
+                'seen_at': seen_at.isoformat() if seen_at else None
             }
         )
 
@@ -107,14 +90,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender': event['sender'],
             'receiver': event['receiver'],
             'message': event['message'],
-            'temp_id': event.get('temp_id')  
+            'temp_id': event.get('temp_id')
         }))
-
 
     async def message_seen(self, event):
         await self.send(text_data=json.dumps({
             'type': 'seen',
-            'message_id': event['message_id']
+            'message_id': event['message_id'],
+            'seen_at': event.get('seen_at')
         }))
 
     @database_sync_to_async
@@ -127,11 +110,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not receiver:
             raise ValueError(f"Receiver '{receiver_username}' does not exist.")
 
-        msg = Message.objects.create(
-            sender=sender,
-            receiver=receiver,
-            content=message
-        )
+        msg = Message.objects.create(sender=sender, receiver=receiver, content=message)
 
         send_unseen_message_email_task.apply_async((msg.id,), countdown=20)
         return msg
@@ -141,5 +120,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg = Message.objects.filter(id=message_id).first()
         if msg and not msg.is_seen:
             msg.is_seen = True
-            msg.seen_at = get_current_datetime()
+            msg.seen_at = timezone.now()
             msg.save()
+            return msg.seen_at
+        return msg.seen_at if msg else None
