@@ -7,6 +7,12 @@ from django.utils import timezone
 from .models import Message
 import hashlib
 from .task import send_unseen_message_email_task
+from datetime import datetime
+import pytz
+
+def get_current_datetime():
+    ist = pytz.timezone('Asia/Kolkata')
+    return datetime.now(ist).strftime("%Y-%m-%d %I:%M %p")
 
 def get_safe_group_name(room_name):
     """Convert any room name to a safe ASCII string using SHA-256"""
@@ -130,5 +136,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg = Message.objects.filter(id=message_id).first()
         if msg and not msg.is_seen:
             msg.is_seen = True
-            msg.seen_at = timezone.now()
+            msg.seen_at = get_current_datetime()
             msg.save()
