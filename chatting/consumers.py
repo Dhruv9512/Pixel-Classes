@@ -56,7 +56,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def handle_chat_message(self, data):
         sender_username = data.get('sender')
         receiver_username = data.get('receiver')
-        message = data.get('message')
+        message = data.get('message')   
 
         if not sender_username or not receiver_username or not message:
             await self.send(json.dumps({"error": "Missing sender, receiver, or message"}))
