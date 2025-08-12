@@ -63,6 +63,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         sender_username = data.get('sender')
         receiver_username = data.get('receiver')
         message = data.get('message')
+        temp_id = data.get('tempId') 
 
         if not sender_username or not receiver_username or not message:
             await self.send(json.dumps({"error": "Missing sender, receiver, or message"}))
@@ -77,9 +78,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'id': saved_message.id,
                 'sender': sender_username,
                 'receiver': receiver_username,
-                'message': message
+                'message': message,
+                'temp_id': temp_id  
             }
         )
+
 
     async def handle_seen_event(self, data):
         message_id = data.get('message_id')
@@ -103,8 +106,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'id': event['id'],
             'sender': event['sender'],
             'receiver': event['receiver'],
-            'message': event['message']
+            'message': event['message'],
+            'temp_id': event.get('temp_id')  
         }))
+
 
     async def message_seen(self, event):
         await self.send(text_data=json.dumps({
