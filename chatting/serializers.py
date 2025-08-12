@@ -1,15 +1,21 @@
+import pytz
 from rest_framework import serializers
 from .models import Message
 from django.contrib.auth.models import User
 
 
+
 class MessageSerializer(serializers.ModelSerializer):
-    sender = serializers.CharField(source='sender.username', read_only=True)
-    receiver = serializers.CharField(source='receiver.username', read_only=True)
-    timestamp = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
-    seen_at = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
-    
+    timestamp = serializers.SerializerMethodField()
+    seen_at = serializers.SerializerMethodField()
+
+    def get_timestamp(self, obj):
+        return obj.timestamp.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %I:%M %p")
+
+    def get_seen_at(self, obj):
+        return obj.seen_at.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d %I:%M %p")
+
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'receiver', 'content', 'timestamp', 'is_seen', 'seen_at']
+        fields = '__all__'
 
