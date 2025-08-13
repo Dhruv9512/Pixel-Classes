@@ -60,6 +60,7 @@ CELERY_TASK_EAGER_PROPAGATES = True
 
 # Installed Apps
 INSTALLED_APPS = [
+    'jet', 
     'Profile',
     'corsheaders', 
     'user',
@@ -73,7 +74,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_simplejwt',
+    'rest_framework_simplejwt',     
 ]
 
 ASGI_APPLICATION = 'Pixel.asgi.application'
@@ -270,5 +271,11 @@ LOGGING = {
         },
     },
 }
+
+
+
+
+JET_DEFAULT_THEME = 'green' 
+
 
 
