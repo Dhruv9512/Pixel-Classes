@@ -34,7 +34,7 @@ def send_email_task(instance_data):
             print(f"[WARNING] No users found for course: {instance.course}")
             return  
 
-        subject = "📄 New Assignment Available!"
+        subject = f"📄 New {instance.choose} Available!"
 
         for user in matching_users:
             user_email = getattr(user.user_obj, "email", None)
