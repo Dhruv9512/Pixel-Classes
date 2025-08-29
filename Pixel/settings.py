@@ -75,13 +75,18 @@ INSTALLED_APPS = [
 ASGI_APPLICATION = 'Pixel.asgi.application'
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': ['rediss://default:ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA@teaching-monkey-13722.upstash.io:6379'],
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [{
+                "address": ("teaching-monkey-13722.upstash.io", 6379),
+                "password": "ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA",
+                "ssl": True,   # ✅ Required for Upstash TLS
+            }],
         },
     },
 }
+
 
 
 # Middleware
