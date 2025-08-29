@@ -81,11 +81,12 @@ CHANNEL_LAYERS = {
             "hosts": [{
                 "address": ("teaching-monkey-13722.upstash.io", 6379),
                 "password": "ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA",
-                "ssl": True,   # ✅ Required for Upstash TLS
+                "ssl": True,  # ✅ Upstash requires TLS
             }],
         },
     },
 }
+
 
 
 
