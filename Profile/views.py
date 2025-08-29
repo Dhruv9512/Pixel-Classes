@@ -55,7 +55,7 @@ class ProfileDetailsView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@method_decorator(never_cache, name="dispatch")
+
 class userPostsView(APIView):
     def post(self, request):
         try:
@@ -107,6 +107,9 @@ class UserPostDeleteView(APIView):
             # Now delete the database post
             post.delete()
 
+            username = request.get('username')
+            user = User.objects.get(username=username)
+            cache.delete(user_cache_key(user))
             return Response({"message": "Post and blob deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
         except AnsPdf.DoesNotExist:

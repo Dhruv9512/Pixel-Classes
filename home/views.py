@@ -1,5 +1,8 @@
 from rest_framework.response import Response
+
+import user
 from .models import CourseList, QuePdf, AnsPdf , Subject
+from user.models import User
 from rest_framework.views import APIView
 from django.views.decorators.csrf import csrf_exempt
 from .serializers import CourseListSerializer, QuePdfSerializer, AnsPdfSerializer , SubjectSerializer
@@ -11,6 +14,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from dotenv import load_dotenv
 from .models import get_current_date, get_current_time
 from django.views.decorators.cache import never_cache
+from django.core.cache import cache
+from user.utils import user_cache_key   # or any key function you are using
+
 # Load environment variables
 load_dotenv()
 
@@ -142,6 +148,9 @@ class AnsPdfUploadView(APIView):
             ans_pdf = AnsPdf.objects.create(que_pdf=que_pdf_id, name=name, contant=content, pdf=blob["url"])
             print("✅ File record saved in the database!")
 
+           
+            user = User.objects.get(username=name)
+            cache.delete(user_cache_key(user))
             serializer = AnsPdfSerializer(ans_pdf)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -152,7 +161,6 @@ class AnsPdfUploadView(APIView):
 
 # ✅ AnsPdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
-@method_decorator(never_cache, name="dispatch")
 class AnsPdfView(APIView):
     def post(self, request):
         try:
@@ -205,6 +213,9 @@ class QuePdfAddView(APIView):
                 "course": course_id,  
             })
 
+            username = request.get('username')
+            user = User.objects.get(username=username)
+            cache.delete(user_cache_key(user))
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
