@@ -31,12 +31,7 @@ ALLOWED_HOSTS = [
     'localhost:5173', 
 ]
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-    }
-}
+
 
 
 
@@ -90,7 +85,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # This should be at the top of the list
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.cache.UpdateCacheMiddleware', 
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -99,6 +96,9 @@ MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',  
 ]
 
+CACHE_MIDDLEWARE_SECONDS = 600  # 10 minutes
+CACHE_MIDDLEWARE_KEY_PREFIX = ""
+CACHE_MIDDLEWARE_KEY_FUNC = "user.utils.user_cache_key"
 # Root URL configuration
 ROOT_URLCONF = 'Pixel.urls'
 
@@ -278,4 +278,14 @@ LOGGING = {
 JET_DEFAULT_THEME = 'green' 
 
 
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "rediss://default:ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA@teaching-monkey-13722.upstash.io:6379",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SSL": True,
+        }
+    }
+}
 

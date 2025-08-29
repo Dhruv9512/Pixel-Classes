@@ -10,6 +10,7 @@ from vercel_blob import put
 from rest_framework.parsers import MultiPartParser, FormParser
 from dotenv import load_dotenv
 from .models import get_current_date, get_current_time
+from django.views.decorators.cache import never_cache
 # Load environment variables
 load_dotenv()
 
@@ -93,6 +94,7 @@ class QuePdfGetSubView(APIView):
 load_dotenv()
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(never_cache, name="dispatch")
 class AnsPdfUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
 
@@ -150,6 +152,7 @@ class AnsPdfUploadView(APIView):
 
 # ✅ AnsPdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(never_cache, name="dispatch")
 class AnsPdfView(APIView):
     def post(self, request):
         try:
@@ -168,6 +171,7 @@ class AnsPdfView(APIView):
 # Adding in que pdf table
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(never_cache, name="dispatch")
 class QuePdfAddView(APIView):
     def post(self, request):
         try:

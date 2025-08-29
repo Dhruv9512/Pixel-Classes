@@ -9,6 +9,8 @@ import hashlib
 from .tasks import send_unseen_message_email_task
 from datetime import datetime
 import pytz
+from django.core.cache import cache
+from user.utils import user_cache_key
 
 def get_current_datetime():
     ist = pytz.timezone('Asia/Kolkata')
@@ -132,7 +134,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             receiver=receiver,
             content=message
         )
-
+        
+        cache.delete(user_cache_key(sender))
+        cache.delete(user_cache_key(receiver))
         send_unseen_message_email_task.apply_async((msg.id,), countdown=20)
         return msg
 

@@ -150,3 +150,28 @@ def send_password_reset_email(user_data=None):
         logger.error(f"User with ID {user_data.get('id')} does not exist.")
     except Exception as e:
         logger.error(f"Error sending password reset email to {email}: {str(e)}")
+
+
+
+
+
+
+
+
+from django.utils.cache import _generate_cache_key
+from hashlib import md5
+
+def user_cache_key(request, key_prefix, method, headerlist):
+    """
+    Generate a cache key that includes the user ID if logged in.
+    """
+    # Start with default key
+    key = _generate_cache_key(request, key_prefix, method, headerlist)
+
+    # Append user ID to the key if user is authenticated
+    if request.user.is_authenticated:
+        key += f":user:{request.user.pk}"
+    else:
+        key += ":anon"
+
+    return md5(key.encode('utf-8')).hexdigest()

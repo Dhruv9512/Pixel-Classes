@@ -1,5 +1,4 @@
 from django.contrib.auth import authenticate, login
-import requests
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -24,17 +23,18 @@ import urllib
 from .models import PasswordResetToken 
 from django.utils.timezone import now
 import time
-from Profile.serializers import CombinedProfileSerializer
 from google.oauth2 import id_token  
 import os
 from google.auth.transport.requests import Request
-from vercel_blob import put  
+from vercel_blob import put 
+from django.views.decorators.cache import never_cache 
 
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
 # OTP Verification View
+@method_decorator(never_cache, name="dispatch")
 class VerifyOTPView(APIView):
     @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
@@ -102,6 +102,7 @@ class VerifyOTPView(APIView):
 
 # Google Login Verification View
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(never_cache, name='dispatch')
 class GoogleLoginAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -160,6 +161,7 @@ class GoogleLoginAPIView(APIView):
 # Google signup verification view
 
 @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(never_cache, name='dispatch')
 class GoogleSignupAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -233,6 +235,7 @@ class GoogleSignupAPIView(APIView):
 
 
 # Login View
+@method_decorator(never_cache, name='dispatch')
 class LoginView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -293,6 +296,7 @@ class LoginView(APIView):
             return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@method_decorator(never_cache, name="dispatch")
 class RegisterView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -366,6 +370,7 @@ class RegisterView(APIView):
 
 
 # Resend OTP View
+@method_decorator(never_cache, name="dispatch")
 class ResendOTPView(APIView):
     """View to resend OTP to the user."""
 
@@ -400,6 +405,7 @@ class ResendOTPView(APIView):
 
 
 # PasswordResetRequestView
+@method_decorator(never_cache, name="dispatch")
 class PasswordResetRequestView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -437,6 +443,7 @@ class PasswordResetRequestView(APIView):
 
 
 # PasswordResetConfirmView
+@method_decorator(never_cache, name="dispatch")
 class PasswordResetConfirmView(APIView):
     @csrf_exempt
     def get(self, request, user_id, token):
@@ -477,6 +484,7 @@ class PasswordResetConfirmView(APIView):
 
 
 # SubmitNewPasswordView
+@method_decorator(never_cache, name="dispatch")
 class SubmitNewPasswordView(APIView):
     @csrf_exempt
     def post(self, request):
@@ -514,6 +522,7 @@ class SubmitNewPasswordView(APIView):
 
 
 # PasswordResetStatusView
+@method_decorator(never_cache, name="dispatch")
 class PasswordResetStatusView(APIView):
     def post(self, request):
         email = request.data.get('email')
@@ -560,6 +569,8 @@ class PasswordResetStatusView(APIView):
 # sanding cute email to nusarat
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+
+@method_decorator(never_cache, name="dispatch")
 class SendCuteEmail(APIView):
     def get(self, request):
         try:

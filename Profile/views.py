@@ -7,7 +7,12 @@ from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
 from vercel_blob import delete  as del_, put
+
+from user.utils import user_cache_key
 from .models import Follow
+from django.core.cache import cache
+from django.views.decorators.cache import never_cache 
+from django.utils.decorators import method_decorator
 
 class ProfileDetailsView(APIView):
     def post(self, request):
@@ -38,6 +43,7 @@ class ProfileDetailsView(APIView):
             data = serializer.data
             data['follower_count'] = follower_count
             data['following_count'] = following_count
+            
             return Response(data, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
@@ -49,7 +55,7 @@ class ProfileDetailsView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
+@method_decorator(never_cache, name="dispatch")
 class userPostsView(APIView):
     def post(self, request):
         try:
@@ -81,7 +87,7 @@ class userPostsView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
+@method_decorator(never_cache, name="dispatch")
 class UserPostDeleteView(APIView):
     def delete(self, request):
         try:
@@ -111,7 +117,7 @@ class UserPostDeleteView(APIView):
         
 
 
-
+@method_decorator(never_cache, name="dispatch")
 class EditProfileView(APIView):
     def put(self, request):
         try:
@@ -168,6 +174,7 @@ class EditProfileView(APIView):
                     serializer.save()
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            cache.delete(user_cache_key(user))
 
             return Response({
                 "message": "Profile updated successfully",
@@ -184,6 +191,7 @@ class EditProfileView(APIView):
 
 
 # create a user search view
+@method_decorator(never_cache, name="dispatch")
 class UserSearchView(APIView):
     def get(self, request):
         try:
@@ -195,6 +203,7 @@ class UserSearchView(APIView):
         
 
 # followe view
+@method_decorator(never_cache, name="dispatch")
 class FollowView(APIView):
     def post(self, request):
         try:
@@ -213,6 +222,8 @@ class FollowView(APIView):
 
             user_follow_obj.following.add(follow_user_obj)
 
+            cache.delete(user_cache_key(user))
+            cache.delete(user_cache_key(follow_user))
             return Response({"message": f"{username} is now following {follow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
@@ -220,7 +231,8 @@ class FollowView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-           
+
+@method_decorator(never_cache, name="dispatch")
 class UnfollowView(APIView):
     def post(self, request):
         try:
@@ -238,7 +250,8 @@ class UnfollowView(APIView):
             unfollow_follow_instance = Follow.objects.get(user=unfollow_user)
         
             follow_instance.following.remove(unfollow_follow_instance)
-
+            cache.delete(user_cache_key(user))
+            cache.delete(user_cache_key(unfollow_user))
             return Response({"message": f"Unfollowed {unfollow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
