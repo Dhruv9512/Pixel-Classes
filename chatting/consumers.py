@@ -6,7 +6,7 @@ from channels.db import database_sync_to_async
 from django.utils import timezone
 from .models import Message
 import hashlib
-from .task import send_unseen_message_email_task
+from .tasks import send_unseen_message_email_task
 from datetime import datetime
 import pytz
 
