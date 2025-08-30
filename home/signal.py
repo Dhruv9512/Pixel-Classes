@@ -34,33 +34,36 @@ def send_email_task(instance_data):
             print(f"[WARNING] No users found for course: {instance.course}")
             return  
 
-        if instance.choose == "exam_paper":
-            subject = f"📄 New Exam Paper Available!"
-        elif instance.choose == "important_notes":
-            subject = f"📄 New Important Notes Available!"
-        else:
-            subject = f"📄 New {instance.choose} Available!"
-
         for user in matching_users:
             user_email = getattr(user.user_obj, "email", None)
             if not user_email:
                 print(f"[WARNING] Skipping user {user.user_obj.username} due to missing email.")
                 continue  
+        
+
+            if instance.choose == "exam_paper":
+                heading = "Exam Paper"
+            elif instance.choose == "important_notes":
+                heading = "Important Notes"
+            else:
+                heading = instance.choose
 
             try:
                 context = {
                     'instance': instance_data,
                     'user': {'username': getattr(user.user_obj, "username", "User")},
-                    'pdf_link': instance_data["pdf_link"]
+                    'pdf_link': instance_data["pdf_link"],
+                    'heading': heading
                 }
 
                 # Render email content
                 html_message = render_to_string('que_pdf_notification/que_pdf_notification.html', context)
                 plain_message = strip_tags(html_message)
 
+                
+
                 # Send email
                 send_mail(
-                    subject,
                     plain_message,
                     settings.EMAIL_HOST_USER,
                     [user_email],

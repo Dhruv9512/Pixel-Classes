@@ -27,14 +27,13 @@
            <ul style="padding-left: 20px; line-height: 1.8; color: #2e7d32;">
                {% for msg in messages %}
                <li style="margin-bottom: 15px; padding: 10px; border-left: 4px solid #66bb6a; background-color: #f1f8f3; border-radius: 4px;">
-                   <span style="font-size: 12px; color:#555;">({{ msg.timestamp|date:"M d, Y h:i A" }})</span><br>
                    <span style="color:#333;">“{{ msg.content|truncatechars:200 }}”</span>
                </li>
                {% endfor %}
            </ul>
 
            <p style="margin-top: 20px;">If you have already read them in the app, you can ignore this email.</p>
-           <p>Click <a href="{{ chat_link }}" style="color:#388e3c; font-weight:bold;">here</a> to view your messages.</p>
+          
         </div>
 
         <!-- Footer -->
