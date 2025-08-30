@@ -11,6 +11,9 @@ from datetime import datetime
 import pytz
 from django.core.cache import cache
 from user.utils import user_cache_key
+from datetime import timedelta
+from django.utils.timezone import now
+
 
 def get_current_datetime():
     ist = pytz.timezone('Asia/Kolkata')
@@ -137,7 +140,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         cache.delete(user_cache_key(sender))
         cache.delete(user_cache_key(receiver))
-        send_unseen_message_email_task.apply_async((msg.id,), countdown=20)
+        send_unseen_message_email_task.apply_async(
+            args=(sender.id, receiver.id),
+            eta=now() + timedelta(seconds=10)
+        )
+
         return msg
 
     @database_sync_to_async

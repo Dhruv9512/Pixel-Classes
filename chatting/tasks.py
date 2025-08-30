@@ -1,30 +1,43 @@
 import logging
 from celery import shared_task
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from .models import Message
+from Pixel.settings import EMAIL_HOST_USER
+from django.contrib.auth.models import User
 
 # ✅ Configure logger
 logger = logging.getLogger(__name__)
 
 @shared_task
-def send_unseen_message_email_task(message_id):
-    logger.info(f"Task started: send_unseen_message_email_task for message_id={message_id}")
+def send_unseen_message_email_task(sender_id, receiver_id):
     try:
-        msg = Message.objects.get(id=message_id)
-        logger.info(f"Message fetched: id={msg.id}, sender={msg.sender.username}, receiver={msg.receiver.username}, is_seen={msg.is_seen}")
+        receiver = User.objects.get(id=receiver_id)
+        sender = User.objects.get(id=sender_id)
 
-        if not msg.is_seen:
+        unseen_msgs = Message.objects.filter(receiver=receiver, is_seen=False).order_by("created_at")
+        chat_link = f"https://pixelclass.netlify.app/chat/{sender.username}"
+
+        if unseen_msgs.exists():
+            context = {
+                "receiver_name": receiver.get_full_name() or receiver.username,
+                "receiver_email": receiver.email,
+                "unseen_count": unseen_msgs.count(),
+                "messages": unseen_msgs,
+                "latest_message": unseen_msgs.last(),
+                "chat_link": chat_link,
+            }
+
+            html_message = render_to_string("unseen_msg/Unseen_Message.html", context)
+            plain_message = strip_tags(html_message)
+
             send_mail(
-                subject="You have an unread message",
-                message=f"You have a new message from {msg.sender.username}: {msg.content}",
-                from_email=None,
-                recipient_list=[msg.receiver.email],
+                subject="📩 You have unread messages",
+                message=plain_message,
+                from_email=EMAIL_HOST_USER,
+                recipient_list=[receiver.email],
+                html_message=html_message,
             )
-            logger.info(f"Email sent successfully to {msg.receiver.email} for message_id={msg.id}")
-        else:
-            logger.info(f"Message {msg.id} already seen. No email sent.")
-
-    except Message.DoesNotExist:
-        logger.warning(f"Message with id={message_id} does not exist.")
     except Exception as e:
-        logger.error(f"Error while sending email for message_id={message_id}: {e}", exc_info=True)
+        logger.error(f"Error while sending batched email: {e}", exc_info=True)
