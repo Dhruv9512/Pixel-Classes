@@ -138,11 +138,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content=message
         )
         
-        cache.delete(user_cache_key(sender))
-        cache.delete(user_cache_key(receiver))
+        
+        current_time_system = now()
         send_unseen_message_email_task.apply_async(
             args=(sender.id, receiver.id),
-            eta=now() + timedelta(seconds=10)
+            eta=current_time_system + timedelta(seconds=10)
         )
 
         return msg

@@ -3,10 +3,14 @@ from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.db.models import Q
 from urllib.parse import unquote
+from django.views.decorators.cache import never_cache
+from django.utils.decorators import method_decorator
 
 from .models import Message
 from .serializers import MessageSerializer
 
+
+@method_decorator(never_cache, name="dispatch")
 class ChatMessagesView(APIView):
     def get(self, request, room_name):
         query = request.query_params.get('q')

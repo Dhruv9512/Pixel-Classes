@@ -84,7 +84,7 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
+USE_TZ = False
 
 
 
