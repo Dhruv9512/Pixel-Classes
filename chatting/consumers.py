@@ -139,11 +139,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         
         
-        current_time_system = now()
-        send_unseen_message_email_task.apply_async(
-            args=(sender.id, receiver.id),
-            eta=current_time_system + timedelta(seconds=10)
-        )
+       # ✅ Schedule email if not already scheduled for this receiver
+        cache_key = f"email_scheduled_receiver_{receiver.id}"
+        if not cache.get(cache_key):
+            send_unseen_message_email_task.apply_async(
+                args=(receiver.id,),  # we only need receiver id now
+                countdown=15  # wait 15 seconds to batch messages
+            )
+            cache.set(cache_key, True, timeout=30)
 
         return msg
 

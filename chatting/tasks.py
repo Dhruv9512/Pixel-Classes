@@ -6,6 +6,7 @@ from django.utils.html import strip_tags
 from .models import Message
 from Pixel.settings import EMAIL_HOST_USER
 from django.contrib.auth.models import User
+from django.core.cache import cache
 
 # ✅ Configure logger
 logger = logging.getLogger(__name__)
@@ -16,8 +17,12 @@ def send_unseen_message_email_task(sender_id, receiver_id):
         receiver = User.objects.get(id=receiver_id)
         sender = User.objects.get(id=sender_id)
 
-        unseen_msgs = Message.objects.filter(receiver=receiver, is_seen=False).order_by("timestamp")
-        chat_link = f"https://pixelclass.netlify.app/chat/{sender.username}"
+        # ✅ Filter unseen messages from the specific sender
+        unseen_msgs = Message.objects.filter(
+            receiver=receiver,
+            sender=sender,
+            is_seen=False
+        ).order_by("timestamp")
 
         if unseen_msgs.exists():
             context = {
@@ -26,18 +31,19 @@ def send_unseen_message_email_task(sender_id, receiver_id):
                 "unseen_count": unseen_msgs.count(),
                 "messages": unseen_msgs,
                 "latest_message": unseen_msgs.last(),
-                "chat_link": chat_link,
             }
 
             html_message = render_to_string("unseen_msg/Unseen_Message.html", context)
             plain_message = strip_tags(html_message)
 
             send_mail(
-                subject="📩 You have unread messages",
+                subject="📩 You have unread messages from {}".format(sender.username),
                 message=plain_message,
                 from_email=EMAIL_HOST_USER,
                 recipient_list=[receiver.email],
                 html_message=html_message,
             )
+            # ✅ Remove lock so new messages can schedule next email
+            cache.delete(f"email_scheduled_receiver_{receiver.id}")
     except Exception as e:
         logger.error(f"Error while sending batched email: {e}", exc_info=True)

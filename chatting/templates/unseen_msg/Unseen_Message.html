@@ -5,48 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unread Messages</title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 0;">
-    <div style="max-width: 600px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+<body style="font-family: Arial, sans-serif; background-color: #e6f4ea; color: #333; margin: 0; padding: 0;">
+    <div style="max-width: 600px; margin: 20px auto; padding: 0; background-color: white; border-radius: 8px; box-shadow: 0 0 12px rgba(0, 0, 0, 0.1); overflow: hidden;">
         
         <!-- Logo -->
-        <div style="display: flex; justify-content: center;">
-            <img style="width: 200px;" src="https://ik.imagekit.io/pxc/pixel%20class_logo%20pc.png?updatedAt=1735069174018" alt="Pixel Class">
+        <div style="display: flex; justify-content: center; padding: 20px; background-color: #2e7d32;">
+            <img style="width: 180px;" src="https://ik.imagekit.io/pxc/pixel%20class_logo%20pc.png?updatedAt=1735069174018" alt="Pixel Class">
         </div>
         
         <!-- Header -->
-        <div style="text-align: center; background-color: #6c63ff; padding: 20px; border-radius: 8px 8px 0 0; color: white;">
+        <div style="text-align: center; background-color: #388e3c; padding: 20px; color: white;">
             <h2 style="margin: 0;">📩 You Have Unread Messages</h2>     
         </div>
         
         <!-- Content -->
-        <div style="padding: 20px; font-size: 16px;">
+        <div style="padding: 20px; font-size: 16px; line-height: 1.6;">
            <p>Hi <strong>{{ receiver_name }}</strong>,</p>
-<p>You have <strong>{{ unseen_count }}</strong> unread message{{ unseen_count|pluralize }}:</p>
+           <p>You have <strong>{{ unseen_count }}</strong> from <strong>{{ latest_message.sender.username }}</strong>:</p>
 
-            
-            <!-- Messages List -->
-            <ul style="padding-left: 20px; line-height: 1.6;">
-                {% for msg in messages %}
-                <li>
-                    <strong>{{ msg.sender.username }}</strong> 
-                    ({{ msg.created_at|date:"M d, Y h:i A" }})<br>
-                    <span style="color:#555;">“{{ msg.content|truncatechars:100 }}”</span>
-                </li>
-                {% endfor %}
-            </ul>
+           <!-- Messages List -->
+           <ul style="padding-left: 20px; line-height: 1.8; color: #2e7d32;">
+               {% for msg in messages %}
+               <li style="margin-bottom: 15px; padding: 10px; border-left: 4px solid #66bb6a; background-color: #f1f8f3; border-radius: 4px;">
+                   <span style="font-size: 12px; color:#555;">({{ msg.timestamp|date:"M d, Y h:i A" }})</span><br>
+                   <span style="color:#333;">“{{ msg.content|truncatechars:200 }}”</span>
+               </li>
+               {% endfor %}
+           </ul>
 
-            <!-- CTA Button -->
-            <p style="text-align: center; margin: 20px 0;">
-                <a href="{{ chat_link }}" style="display: inline-block; padding: 12px 20px; background-color: #6c63ff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                    View Messages 💬
-                </a>
-            </p>
-
-            <p>If you have already read them in the app, you can ignore this email.</p>
+           <p style="margin-top: 20px;">If you have already read them in the app, you can ignore this email.</p>
+           <p>Click <a href="{{ chat_link }}" style="color:#388e3c; font-weight:bold;">here</a> to view your messages.</p>
         </div>
 
         <!-- Footer -->
-        <div style="padding: 10px; text-align: center; font-size: 14px; color: #888;">
+        <div style="padding: 15px; text-align: center; font-size: 14px; color: #555; background-color: #e6f4ea;">
             <p>Thank you for using <strong>Pixel Class</strong>.</p>
             <p>Best regards,<br><strong>Pixel Class Team</strong></p>
         </div>
