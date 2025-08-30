@@ -16,7 +16,7 @@ def send_unseen_message_email_task(sender_id, receiver_id):
         receiver = User.objects.get(id=receiver_id)
         sender = User.objects.get(id=sender_id)
 
-        unseen_msgs = Message.objects.filter(receiver=receiver, is_seen=False).order_by("created_at")
+        unseen_msgs = Message.objects.filter(receiver=receiver, is_seen=False).order_by("timestamp")
         chat_link = f"https://pixelclass.netlify.app/chat/{sender.username}"
 
         if unseen_msgs.exists():
