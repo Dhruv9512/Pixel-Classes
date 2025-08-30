@@ -1,59 +1,63 @@
-from dotenv import load_dotenv
-load_dotenv()
-from pathlib import Path
-from decouple import config
 import os
+from pathlib import Path
 from datetime import timedelta
 import dj_database_url
+from decouple import config
+import ssl
+
+# Load environment variables
 from dotenv import load_dotenv
+load_dotenv()
 
-load_dotenv() 
-
-
-
-
-VERCEL_BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")
-# Base directory setup
+# ----------------------
+# BASE DIRECTORY
+# ----------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security and Debugging
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")  # Use a secure key in production
-DEBUG = False
+# ----------------------
+# SECURITY
+# ----------------------
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-# ALLOWED_HOSTS: Allow the frontend and backend URLs
-ALLOWED_HOSTS = [
-    'pixel-classes.onrender.com', 
-    'localhost', 
-    '127.0.0.1', 
-    'pixelclass.netlify.app',  # Updated to not include full URL 'http://localhost:5173'
-    'localhost:5175',
-    'localhost:5174',
-    'localhost:5173', 
-]
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="pixel-classes.onrender.com",
+    cast=lambda v: [s.strip() for s in v.split(",")]
+)
 
+# ----------------------
+# CSRF / SESSION SECURITY
+# ----------------------
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
 
-
-
-
-# Celery Settings
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-
-
-
-# Corrected SSL Configuration for Redis
-CELERY_BROKER_USE_SSL = {
-    'ssl_cert_reqs': None  # Use None instead of 'CERT_NONE'
+# ----------------------
+# DATABASE CONFIGURATION
+# ----------------------
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=not DEBUG
+    )
 }
 
-# Ensures Celery retries broker connection on startup
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_TASK_EAGER_PROPAGATES = True
+# ----------------------
+# EMAIL CONFIGURATION
+# ----------------------
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
-
-
-# Installed Apps
+# ----------------------
+# APPLICATIONS
+# ----------------------
 INSTALLED_APPS = [
     'jet', 
     'Profile',
@@ -73,25 +77,14 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',     
 ]
 
-ASGI_APPLICATION = 'Pixel.asgi.application'
-
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    }
-}
-
-USE_TZ = False
-
-
-
-
-# Middleware
+# ----------------------
+# MIDDLEWARE
+# ----------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # This should be at the top of the list
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.cache.UpdateCacheMiddleware', 
+    'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -99,34 +92,40 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.middleware.gzip.GZipMiddleware',  
+    'django.middleware.gzip.GZipMiddleware',
 ]
 
-CACHE_MIDDLEWARE_SECONDS = 300  # 5 minutes
+CACHE_MIDDLEWARE_SECONDS = 300
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
 CACHE_MIDDLEWARE_KEY_FUNC = "user.utils.user_cache_key"
-# Root URL configuration
+
 ROOT_URLCONF = 'Pixel.urls'
+WSGI_APPLICATION = 'Pixel.wsgi.application'
+ASGI_APPLICATION = 'Pixel.asgi.application'
 
+# ----------------------
+# CHANNELS
+# ----------------------
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
-# Static files (CSS, JavaScript, Images)
+# ----------------------
+# STATIC / MEDIA FILES
+# ----------------------
 STATIC_URL = '/static/'
-
-# Use Whitenoise for serving static files with compression and caching
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Directory for collecting static files (when running `collectstatic`)
-STATICFILES_DIRS = [
-    BASE_DIR / "static",  # or use the full path like 'C:/pxc/Pixel-Classes/static'
-]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# For production, Django will collect all static files into this directory
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-
-# Templates configuration
+# ----------------------
+# TEMPLATES
+# ----------------------
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -143,22 +142,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Pixel.wsgi.application'
-
-# Database Configuration
-DATABASES = {
-   'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
-}
-
-# Email Settings
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = config("EMAIL_PORT", default=587)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-
-# Password Validators
+# ----------------------
+# AUTHENTICATION
+# ----------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -166,57 +152,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Language and timezone settings
+# ----------------------
+# INTERNATIONALIZATION
+# ----------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+USE_L10N = True
 
-
-
-# Default auto field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5175',  # Frontend in development
-    'http://localhost:5174',  # Frontend in development
-    'http://localhost:5173',  # Frontend in development
-    'https://pixel-classes.onrender.com',  # Frontend hosted on Render
-    'https://pixelclass.netlify.app',  # Frontend hosted on Netlify
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:5175',  # Frontend in development
-    'http://localhost:5174',
-    'https://pixelclass.netlify.app',
-]
-
-# Secure CSRF cookie settings
-CSRF_COOKIE_SECURE = False  # Disable for local development (HTTPS is not needed)
-CSRF_COOKIE_SAMESITE = 'Strict'  # CSRF cookie should not be sent with cross-site requests
-
-# CORS allow credentials and headers
-CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
-CORS_ALLOW_HEADERS = [
-    'content-type',
-    'authorization',
-    'x-csrftoken',
-]
-
-# Security headers (optional for production)
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 3600
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-
-# Enable SSL headers for proxy setup in production
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# REST Framework settings
+# ----------------------
+# REST FRAMEWORK
+# ----------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -231,68 +180,88 @@ REST_FRAMEWORK = {
     },
 }
 
-# JWT Token Lifetime settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),  # Expiry for access tokens
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Expiry for refresh tokens
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-# Logging Configuration
+# ----------------------
+# CELERY CONFIGURATION
+# ----------------------
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Use SSL properly in production
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_REQUIRED if not DEBUG else None
+}
+
+# ----------------------
+# CORS
+# ----------------------
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="https://pixel-classes.onrender.com,https://pixelclass.netlify.app",
+    cast=lambda v: [s.strip() for s in v.split(",")]
+)
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
+CORS_ALLOW_HEADERS = ['content-type', 'authorization', 'x-csrftoken']
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="https://pixelclass.netlify.app",
+    cast=lambda v: [s.strip() for s in v.split(",")]
+)
+
+# ----------------------
+# SECURITY HEADERS
+# ----------------------
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ----------------------
+# LOGGING
+# ----------------------
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-
     'handlers': {
-        'console': {
-            'level': 'INFO',  # You can use 'WARNING' to suppress more output
-            'class': 'logging.StreamHandler',
-        },
+        'console': {'level': 'INFO', 'class': 'logging.StreamHandler'},
     },
-
     'loggers': {
-        # Core Django logs (INFO and up)
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-
-        # Suppress watchdog logs that show 'first seen with mtime'
-        'watchdog': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'watchdog.observers': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-
-        # Optional: suppress logs from other noisy packages like DRF
-        'rest_framework': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'watchdog': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+        'rest_framework': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
     },
 }
 
+# ----------------------
+# JET ADMIN THEME
+# ----------------------
+JET_DEFAULT_THEME = 'green'
 
-
-
-JET_DEFAULT_THEME = 'green' 
-
-
+# ----------------------
+# CACHING
+# ----------------------
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "my_cache_table",  # Table created by `python manage.py createcachetable my_cache_table`
-        "TIMEOUT": 300,  # Cache timeout in seconds (5 minutes)
-        "OPTIONS": {
-            "MAX_ENTRIES": 1000  # Maximum number of cache entries
-        }
+        "LOCATION": "my_cache_table",
+        "TIMEOUT": 300,
+        "OPTIONS": {"MAX_ENTRIES": 1000},
     }
 }
 
-
+# ----------------------
+# Optional: Vercel Blob Token
+# ----------------------
+VERCEL_BLOB_TOKEN = os.getenv("BLOB_READ_WRITE_TOKEN")

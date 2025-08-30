@@ -3,7 +3,7 @@ from django.db import models
 class DatabaseCache(models.Model):
     cache_key = models.CharField(max_length=255, primary_key=True)
     value = models.TextField()
-    expire = models.DateTimeField()
+    expires = models.DateTimeField()  # <-- rename from 'expire' to 'expires'
 
     class Meta:
         db_table = 'my_cache_table'  # same as created by createcachetable
