@@ -105,7 +105,7 @@ MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',  
 ]
 
-CACHE_MIDDLEWARE_SECONDS = 600  # 10 minutes
+CACHE_MIDDLEWARE_SECONDS = 300  # 5 minutes
 CACHE_MIDDLEWARE_KEY_PREFIX = ""
 CACHE_MIDDLEWARE_KEY_FUNC = "user.utils.user_cache_key"
 # Root URL configuration

@@ -144,9 +144,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not cache.get(cache_key):
             send_unseen_message_email_task.apply_async(
                 args=(sender.id, receiver.id),  # we only need sender and receiver id now
-                countdown=15  # wait 15 seconds to batch messages
+                countdown=3600  # wait 1 hour to batch messages
             )
-            cache.set(cache_key, True, timeout=30)
+            cache.set(cache_key, True, timeout=4500)
 
 
         return msg
