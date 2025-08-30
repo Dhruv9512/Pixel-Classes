@@ -47,7 +47,7 @@ def send_email_task(instance_data):
                 heading = "Important Notes"
             else:
                 heading = instance.choose
-
+                
             try:
                 context = {
                     'instance': instance_data,
@@ -60,10 +60,11 @@ def send_email_task(instance_data):
                 html_message = render_to_string('que_pdf_notification/que_pdf_notification.html', context)
                 plain_message = strip_tags(html_message)
 
-                
 
+                subject = f"📝 New {heading} PDF Available!"
                 # Send email
                 send_mail(
+                    subject,
                     plain_message,
                     settings.EMAIL_HOST_USER,
                     [user_email],

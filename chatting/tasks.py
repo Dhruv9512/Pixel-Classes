@@ -37,6 +37,7 @@ def send_unseen_message_email_task(sender_id, receiver_id):
             plain_message = strip_tags(html_message)
 
             send_mail(
+                subject="📩 You have unread messages from {}".format(sender.username),
                 message=plain_message,
                 from_email=EMAIL_HOST_USER,
                 recipient_list=[receiver.email],
