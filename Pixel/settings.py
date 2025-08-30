@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'corsheaders', 
     'user',
     'home',
+    'core',
     'chatting',  
     'channels',  
     'django.contrib.admin',
@@ -76,14 +77,10 @@ ASGI_APPLICATION = 'Pixel.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [
-                "rediss://:ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA@teaching-monkey-13722.upstash.io:6379"
-            ],
-        },
-    },
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
 }
+
 USE_TZ = False
 
 
@@ -289,12 +286,13 @@ JET_DEFAULT_THEME = 'green'
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "rediss://default:ATWaAAIjcDEyN2JkZWQzNzVhYzc0NGJlOWY2ZGQxMGYxMDVlMmY0OHAxMA@teaching-monkey-13722.upstash.io:6379",
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "my_cache_table",  # Table created by `python manage.py createcachetable my_cache_table`
+        "TIMEOUT": 300,  # Cache timeout in seconds (5 minutes)
         "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "SSL": True,
+            "MAX_ENTRIES": 1000  # Maximum number of cache entries
         }
     }
 }
+
 
