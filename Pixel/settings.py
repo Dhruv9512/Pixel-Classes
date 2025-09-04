@@ -22,9 +22,10 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="pixel-classes.onrender.com",
+    default="pixel-classes.onrender.com,127.0.0.1,localhost",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
+
 
 # ----------------------
 # CSRF / SESSION SECURITY

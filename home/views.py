@@ -213,7 +213,7 @@ class QuePdfAddView(APIView):
                 "course": course_id,  
             })
 
-            username = request.get('username')
+            username = request.data.get('username')
             user = User.objects.get(username=username)
             cache.delete(user_cache_key(user))
             if serializer.is_valid():
