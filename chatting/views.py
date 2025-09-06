@@ -1,3 +1,4 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
@@ -6,104 +7,92 @@ from urllib.parse import unquote
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from .models import Message
 from .serializers import MessageSerializer
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 import hashlib
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
 import jwt
 from django.conf import settings
-from django.contrib.auth.models import User
-from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 
-@method_decorator(never_cache, name="dispatch")
-def get_user_from_refresh_token(token):
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        if payload.get("token_type") != "refresh":
-            return None  # Only accept refresh tokens
-        user_id = payload.get("user_id")
-        return User.objects.get(id=user_id)
-    except (jwt.ExpiredSignatureError, jwt.DecodeError, User.DoesNotExist):
-        return None
+# Set up logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
+
 @method_decorator(never_cache, name="dispatch")
 class ChatMessagesView(APIView):
     def get(self, request, room_name):
         query = request.query_params.get('q')
+        logger.info(f"Fetching messages for room: {room_name} with query: {query}")
 
         try:
-            # Correctly decode the usernames
             username1_enc, username2_enc = room_name.split('__')
             username1 = unquote(username1_enc)
             username2 = unquote(username2_enc)
 
-            # Get the user objects
-            try:
-                user1 = User.objects.get(username=username1)
-            except User.DoesNotExist:
-                return Response({"error": f"User '{username1}' not found"}, status=404)
+            user1 = User.objects.get(username=username1)
+            user2 = User.objects.get(username=username2)
+            logger.info(f"Users found: {user1.username}, {user2.username}")
 
-            try:
-                user2 = User.objects.get(username=username2)
-            except User.DoesNotExist:
-                return Response({"error": f"User '{username2}' not found"}, status=404)
-
-
-            # Filter messages where (sender=user1 AND receiver=user2) OR vice versa
             messages = Message.objects.filter(
                 Q(sender=user1, receiver=user2) | Q(sender=user2, receiver=user1)
             )
 
-            # Optional text search
             if query:
                 messages = messages.filter(content__icontains=query)
 
             messages = messages.order_by('timestamp')
-
             serializer = MessageSerializer(messages, many=True)
             return Response(serializer.data)
 
         except User.DoesNotExist:
+            logger.error("One or both users not found")
             return Response({"error": "One or both users not found"}, status=404)
-
         except ValueError:
+            logger.error("Invalid room name format")
             return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
-        
+
 
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
-    
     def put(self, request, pk):
         token = request.headers.get("Authorization")
+
         if not token:
+            logger.warning("No token provided")
             return Response({"error": "Token required"}, status=401)
 
         token = token.split()[1]
-        sender = get_user_from_refresh_token(token)
+        refresh_token = RefreshToken(token)
+        user_id = refresh_token["user_id"]
+        sender = User.objects.get(id=user_id)
         if not sender:
+            logger.warning("Invalid token")
             return Response({"error": "Invalid token"}, status=401)
 
-        # Get the message
         try:
             message = Message.objects.get(pk=pk)
+            logger.info(f"Message found: {message.id} by {message.sender.username}")
         except Message.DoesNotExist:
+            logger.error("Message not found")
             return Response({"error": "Message not found"}, status=404)
 
-        # Only sender can edit
         if message.sender != sender:
+            logger.warning("User tried to edit someone else's message")
             return Response({"error": "You can only edit your own messages"}, status=403)
 
         new_content = request.data.get("content")
         if not new_content:
+            logger.warning("No new content provided")
             return Response({"error": "Content is required"}, status=400)
 
         message.content = new_content
         message.save()
+        logger.info(f"Message {message.id} updated")
 
-        # Broadcast edit to WebSocket
         channel_layer = get_channel_layer()
         room_name = f"{message.sender.username}__{message.receiver.username}"
         group_name = f"chat_{hashlib.sha256(room_name.encode()).hexdigest()}"
@@ -111,43 +100,51 @@ class EditMessageView(APIView):
             group_name,
             {"type": "edit_message", "id": message.id, "new_content": new_content}
         )
+        logger.info(f"Edit broadcasted to group {group_name}")
 
         return Response({"id": message.id, "content": message.content}, status=200)
 
+
 @method_decorator(never_cache, name="dispatch")
 class DeleteMessageView(APIView):
-
-      def delete(self, request, pk):
-        # Get refresh token from headers
+    def delete(self, request, pk):
         token = request.headers.get("Authorization")
+        logger.info(f"Delete request for message {pk} with token: {token}")
+
         if not token:
+            logger.warning("No token provided")
             return Response({"error": "Token required"}, status=401)
 
         token = token.split()[1]
-        sender = get_user_from_refresh_token(token)
+        refersh_token = RefreshToken(token)
+        user_id = refersh_token["user_id"]
+        sender = User.objects.get(id=user_id)
         if not sender:
+            logger.warning("Invalid token")
             return Response({"error": "Invalid token"}, status=401)
 
-        # Get the message
         try:
             message = Message.objects.get(pk=pk)
+            logger.info(f"Message found: {message.id} by {message.sender.username}")
         except Message.DoesNotExist:
+            logger.error("Message not found")
             return Response({"error": "Message not found"}, status=404)
 
-        # Only sender can delete
         if message.sender != sender:
+            logger.warning("User tried to delete someone else's message")
             return Response({"error": "You can only delete your own messages"}, status=403)
 
         room_name = f"{message.sender.username}__{message.receiver.username}"
         group_name = f"chat_{hashlib.sha256(room_name.encode()).hexdigest()}"
 
         message.delete()
+        logger.info(f"Message {pk} deleted")
 
-        # Broadcast delete to WebSocket
         channel_layer = get_channel_layer()
         async_to_sync(channel_layer.group_send)(
             group_name,
             {"type": "delete_message", "id": pk}
         )
+        logger.info(f"Delete broadcasted to group {group_name}")
 
         return Response({"message": "Message deleted successfully"}, status=200)
