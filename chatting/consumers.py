@@ -13,6 +13,7 @@ from django.core.cache import cache
 from user.utils import user_cache_key
 from datetime import timedelta
 from django.utils.timezone import now
+from asgiref.sync import async_to_sync
 
 
 def get_current_datetime():
@@ -25,6 +26,8 @@ def get_safe_group_name(room_name):
     return f"chat_{hashed}"
 
 
+
+# chatting level room
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         raw_room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
@@ -122,6 +125,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message_id': event['message_id']
         }))
 
+    async def edit_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "edit",
+            "id": event["id"],
+            "new_content": event["new_content"]
+    }))
+        
+    async def delete_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "delete",
+            "id": event["id"]
+        }))
+
     @database_sync_to_async
     def save_message(self, sender_username, receiver_username, message):
         sender = User.objects.filter(username=sender_username).first()
@@ -132,24 +148,60 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not receiver:
             raise ValueError(f"Receiver '{receiver_username}' does not exist.")
 
+        # Save the message in DB
         msg = Message.objects.create(
             sender=sender,
             receiver=receiver,
             content=message
         )
-        
-        
-        # ✅ Schedule email if not already scheduled for this receiver
+
+        # Schedule email for unseen messages
         cache_key = f"email_scheduled_receiver_{receiver.id}"
         if not cache.get(cache_key):
             send_unseen_message_email_task.apply_async(
-                args=(sender.id, receiver.id),  # we only need sender and receiver id now
+                args=(sender.id, receiver.id),
                 countdown=3600  # wait 1 hour to batch messages
             )
             cache.set(cache_key, True, timeout=4500)
 
+        # --- New: Broadcast to chat room ---
+        async_to_sync(self.channel_layer.group_send)(
+            self.room_group_name,
+            {
+                'type': 'chat_message',  # triggers chat_message method in ChatConsumer
+                'id': msg.id,
+                'sender': sender.username,
+                'receiver': receiver.username,
+                'message': message,
+            }
+        )
+
+        # --- New: Broadcast to user-level notifications ---
+        # Sender's notification channel
+        async_to_sync(self.channel_layer.group_send)(
+            f"user_notifications_{sender.id}",
+            {
+                'type': 'new_message_notification',  # triggers new_message_notification method
+                'id': msg.id,
+                'sender': sender.username,
+                'receiver': receiver.username,
+                'message': message,
+            }
+        )
+        # Receiver's notification channel
+        async_to_sync(self.channel_layer.group_send)(
+            f"user_notifications_{receiver.id}",
+            {
+                'type': 'new_message_notification',
+                'id': msg.id,
+                'sender': sender.username,
+                'receiver': receiver.username,
+                'message': message,
+            }
+        )
 
         return msg
+
 
     @database_sync_to_async
     def mark_message_seen(self, message_id):
@@ -158,3 +210,52 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.is_seen = True
             msg.seen_at = get_current_datetime()
             msg.save()
+
+
+
+# User  level room
+# consumers.py
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Get the user from scope (requires AuthMiddlewareStack)
+        self.user = self.scope.get("user")
+        if not self.user or self.user.is_anonymous:
+            await self.close()
+            return
+
+        # Unique group name per user
+        self.group_name = f"user_notifications_{self.user.id}"
+
+        # Add this connection to the group
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.group_name,
+            self.channel_name
+        )
+
+
+    async def new_message_notification(self, event):
+        # Example event structure for modern chat app
+        payload = {
+            'type': 'new_message_notification',
+            'id': event.get('id'),
+            'sender': event.get('sender'),
+            'receiver': event.get('receiver'),
+            'message': event.get('message'),
+            'message_type': event.get('message_type', 'text'),  # text, image, video
+            'timestamp': event.get('timestamp'),  # datetime string
+            'is_seen': event.get('is_seen', False),
+            'reactions': event.get('reactions', []),  # list of reactions
+            'unseen_count': event.get('unseen_count', 0),  # for inbox preview
+        }
+        await self.send(text_data=json.dumps(payload))
+
