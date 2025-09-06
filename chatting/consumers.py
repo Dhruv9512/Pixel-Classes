@@ -10,6 +10,8 @@ from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
 from asgiref.sync import async_to_sync
+from rest_framework_simplejwt.tokens import AccessToken
+from django.core.exceptions import ObjectDoesNotExist
 
 # ----------------- DB cache key -----------------
 ONLINE_USERS_KEY = "online_users"  # store list of online user IDs
@@ -191,6 +193,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         add_online_user(self.user.id)
         await self.broadcast_status()
 
+
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
@@ -223,11 +226,17 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     # ----------------- Helpers -----------------
     @database_sync_to_async
     def get_user_from_token(self, token_key):
-        from rest_framework.authtoken.models import Token
         if not token_key:
             return None
-        token = Token.objects.filter(key=token_key).first()
-        return token.user if token else None
+        try:
+            # Decode JWT access token
+            validated_token = AccessToken(token_key)
+            user_id = validated_token["user_id"]  # this is standard claim in JWT
+            user = User.objects.get(id=user_id)
+            return user
+        except (ObjectDoesNotExist, Exception):
+            return None
+
 
     @database_sync_to_async
     def get_all_users(self):
