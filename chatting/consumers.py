@@ -10,7 +10,7 @@ from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
 from asgiref.sync import async_to_sync
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.exceptions import ObjectDoesNotExist
 import logging
 
@@ -253,7 +253,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             logger.warning("[TOKEN] No token provided")
             return None
         try:
-            validated_token = AccessToken(token_key)
+            validated_token = RefreshToken(token_key)
             user_id = validated_token["user_id"]
             user = User.objects.get(id=user_id)
             logger.info(f"[TOKEN] Token valid. User ID: {user_id}, Username: {user.username}")
