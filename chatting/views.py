@@ -60,7 +60,6 @@ class ChatMessagesView(APIView):
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
     
-    permission_classes = [IsAuthenticated]
     def put(self, request, pk):
         try:
             message = Message.objects.get(pk=pk)
@@ -102,7 +101,6 @@ class EditMessageView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class DeleteMessageView(APIView):
-    permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
         try:
