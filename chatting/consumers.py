@@ -31,20 +31,29 @@ def get_safe_group_name(room_name):
     return f"chat_{hashed}"
 
 # ----------------- DB cache helpers -----------------
-def add_online_user(user_id):
-    users = cache.get(ONLINE_USERS_KEY, [])
+from asgiref.sync import sync_to_async
+
+# Async versions
+add_online_user = sync_to_async(lambda user_id: _add_online_user(user_id))
+remove_online_user = sync_to_async(lambda user_id: _remove_online_user(user_id))
+get_online_users = sync_to_async(lambda: _get_online_users())
+
+# Original synchronous implementations
+def _add_online_user(user_id):
+    users = cache.get("online_users", [])
     if user_id not in users:
         users.append(user_id)
-        cache.set(ONLINE_USERS_KEY, users)
+        cache.set("online_users", users)
 
-def remove_online_user(user_id):
-    users = cache.get(ONLINE_USERS_KEY, [])
+def _remove_online_user(user_id):
+    users = cache.get("online_users", [])
     if user_id in users:
         users.remove(user_id)
-        cache.set(ONLINE_USERS_KEY, users)
+        cache.set("online_users", users)
 
-def get_online_users():
-    return cache.get(ONLINE_USERS_KEY, [])
+def _get_online_users():
+    return cache.get("online_users", [])
+
 
 # ----------------- Chat Room Consumer -----------------
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -204,7 +213,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             logger.info(f"[WS CONNECT] User {self.user.username} connected successfully")
 
             # Mark user online
-            add_online_user(self.user.id)
+            await add_online_user(self.user.id)
             await self.broadcast_status()
 
         except Exception as e:
@@ -218,7 +227,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
         if hasattr(self, "user") and self.user:
-            remove_online_user(self.user.id)
+            await remove_online_user(self.user.id)
             await self.broadcast_status()
 
     async def broadcast_status(self):
