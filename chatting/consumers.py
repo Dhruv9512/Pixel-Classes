@@ -12,6 +12,9 @@ from django.core.cache import cache
 from asgiref.sync import async_to_sync
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.exceptions import ObjectDoesNotExist
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ----------------- DB cache key -----------------
 ONLINE_USERS_KEY = "online_users"  # store list of online user IDs
@@ -177,82 +180,84 @@ class ChatConsumer(AsyncWebsocketConsumer):
 # ----------------- User Notifications Consumer -----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.group_name = None  # ✅ always define it
+        logger.info("[WS CONNECT] New connection attempt")
+        self.group_name = None
 
-        query_string = self.scope["query_string"].decode()
-        from urllib.parse import parse_qs
-        query_params = parse_qs(query_string)
-        token_key = query_params.get("token", [None])[0]
+        try:
+            query_string = self.scope["query_string"].decode()
+            logger.info(f"[WS CONNECT] Query string: {query_string}")
 
+            from urllib.parse import parse_qs
+            query_params = parse_qs(query_string)
+            token_key = query_params.get("token", [None])[0]
+            logger.info(f"[WS CONNECT] Token key extracted: {token_key}")
 
-        self.user = await self.get_user_from_token(token_key)
-        if not self.user:
+            self.user = await self.get_user_from_token(token_key)
+            if not self.user:
+                logger.warning("[WS CONNECT] Invalid or missing user, closing connection")
+                await self.close()
+                return
+
+            self.group_name = f"user_notifications_{self.user.id}"
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+            await self.accept()
+            logger.info(f"[WS CONNECT] User {self.user.username} connected successfully")
+
+            # Mark user online
+            add_online_user(self.user.id)
+            await self.broadcast_status()
+
+        except Exception as e:
+            logger.exception(f"[WS CONNECT] Exception during connect: {e}")
             await self.close()
-            return
-
-        self.group_name = f"user_notifications_{self.user.id}"
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
-
-        # Mark user online
-        add_online_user(self.user.id)
-        await self.broadcast_status()
 
     async def disconnect(self, close_code):
-        # ✅ only discard if a group exists
+        logger.info(f"[WS DISCONNECT] User {getattr(self, 'user', None)} disconnected, code: {close_code}")
+
         if self.group_name:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-        # Remove user if they were authenticated
         if hasattr(self, "user") and self.user:
             remove_online_user(self.user.id)
             await self.broadcast_status()
 
-    # ----------------- Event Handlers -----------------
-    async def new_message_notification(self, event):
-        await self.send(text_data=json.dumps(event))
-
-    async def online_status(self, event):
-        await self.send(text_data=json.dumps({
-            "type": "online_status",
-            "online_ids": event["online_ids"]
-        }))
-
     async def broadcast_status(self):
-        online_ids = get_online_users()
-        all_users = await self.get_all_users()
-        for user in all_users:
-            await self.channel_layer.group_send(
-                f"user_notifications_{user.id}",
-                {
-                    "type": "online_status",
-                    "online_ids": online_ids
-                }
-            )
+        try:
+            online_ids = get_online_users()
+            logger.info(f"[BROADCAST STATUS] Online users: {online_ids}")
+            all_users = await self.get_all_users()
+            for user in all_users:
+                await self.channel_layer.group_send(
+                    f"user_notifications_{user.id}",
+                    {
+                        "type": "online_status",
+                        "online_ids": online_ids
+                    }
+                )
+            logger.info("[BROADCAST STATUS] Status broadcast completed")
+        except Exception as e:
+            logger.exception(f"[BROADCAST STATUS] Exception: {e}")
 
-    # ----------------- Helpers -----------------
     @database_sync_to_async
     def get_user_from_token(self, token_key):
         if not token_key:
-            print("[TOKEN] No token provided")
+            logger.warning("[TOKEN] No token provided")
             return None
         try:
-            # Decode JWT access token
             validated_token = AccessToken(token_key)
-            user_id = validated_token["user_id"]  # this is standard claim in JWT
+            user_id = validated_token["user_id"]
             user = User.objects.get(id=user_id)
-            print(f"[TOKEN] Token valid. User ID: {user_id}, Username: {user.username}")
+            logger.info(f"[TOKEN] Token valid. User ID: {user_id}, Username: {user.username}")
             return user
         except ObjectDoesNotExist:
-            print(f"[TOKEN] User with ID {user_id} does not exist")
+            logger.warning(f"[TOKEN] User with ID {user_id} does not exist")
             return None
         except Exception as e:
-            print(f"[TOKEN] Exception decoding token: {e}")
+            logger.exception(f"[TOKEN] Exception decoding token: {e}")
             return None
-
 
     @database_sync_to_async
     def get_all_users(self):
         users = User.objects.all()
-        print(f"[USERS] Fetched {users.count()} users from DB")
+        logger.info(f"[USERS] Fetched {users.count()} users from DB")
         return users
