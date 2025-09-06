@@ -11,8 +11,6 @@ from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.exceptions import ObjectDoesNotExist
-from asgiref.sync import async_to_sync
 
 # ---------------- Logging ----------------
 logger = logging.getLogger(__name__)
@@ -166,21 +164,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             cache.set(cache_key, True, timeout=4500)
             logger.info(f"[SAVE MESSAGE] Scheduled unseen message email for receiver {receiver.username}")
 
-        # Broadcast to user
-        async_to_sync(self.channel_layer.group_send)(
-            f"user_notifications_{receiver.id}",
-            {
-                'type': 'total_unseen_count',
-                'id': msg.id,
-                'sender': sender.username,
-                'receiver': receiver.username,
-                'message': msg.content,
-                'timestamp': str(msg.timestamp),
-                'is_seen': msg.is_seen,
-                'total_unseen_count': Message.objects.filter(receiver=receiver, is_seen=False).count()
-            }
-        )
-        logger.info(f"[SAVE MESSAGE] Broadcasted total_unseen_count for receiver {receiver.username}")
         return msg
 
     @database_sync_to_async
@@ -191,6 +174,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.seen_at = get_current_datetime()
             msg.save()
             logger.info(f"[MARK SEEN] Message ID {message_id} marked as seen")
+
+    # ---------------- User notifications ----------------
+    async def send_user_notifications(self, msg):
+        """
+        Broadcast unseen count and last message to both sender and receiver notification groups.
+        """
+        for user in [msg.sender, msg.receiver]:
+            total_unseen = await self.get_total_unseen_count(user.id)
+            await self.channel_layer.group_send(
+                f"user_notifications_{user.id}",
+                {
+                    "type": "total_unseen_count",
+                    "id": msg.id,
+                    "sender": msg.sender.username,
+                    "receiver": msg.receiver.username,
+                    "message": msg.content,
+                    "timestamp": str(msg.timestamp),
+                    "is_seen": msg.is_seen,
+                    "total_unseen_count": total_unseen
+                }
+            )
+
+    @database_sync_to_async
+    def get_total_unseen_count(self, user_id):
+        return Message.objects.filter(receiver_id=user_id, is_seen=False).count()
 
 
 # ---------------- NotificationConsumer ----------------
@@ -230,8 +238,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         try:
             validated_token = RefreshToken(token_key)
             user_id = validated_token["user_id"]
-            user = User.objects.get(id=user_id)
-            return user
+            return User.objects.get(id=user_id)
         except Exception as e:
             logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
             return None
