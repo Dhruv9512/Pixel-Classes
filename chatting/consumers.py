@@ -182,7 +182,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         query_string = self.scope['query_string'].decode()
         token_key = query_string.split("token=")[1] if "token=" in query_string else None
 
-        self.user = await self.get_user_from_jwt(token_key)
+        self.user = await self.get_user_from_token(token_key)
         if not self.user:
             await self.close()
             return
