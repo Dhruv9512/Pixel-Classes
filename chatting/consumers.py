@@ -177,10 +177,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 # ----------------- User Notifications Consumer -----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        query_string = self.scope['query_string'].decode()
-        token_key = query_string.split("token=")[1] if query_string.startswith("token=") else None
+        self.group_name = None  # ✅ always define it
 
-        self.user = await self.get_user_from_token(token_key)
+        query_string = self.scope['query_string'].decode()
+        token_key = query_string.split("token=")[1] if "token=" in query_string else None
+
+        self.user = await self.get_user_from_jwt(token_key)
         if not self.user:
             await self.close()
             return
@@ -189,17 +191,19 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        # Mark user as online
+        # Mark user online
         add_online_user(self.user.id)
         await self.broadcast_status()
 
-
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        # ✅ only discard if a group exists
+        if self.group_name:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-        # Mark user as offline
-        remove_online_user(self.user.id)
-        await self.broadcast_status()
+        # Remove user if they were authenticated
+        if hasattr(self, "user") and self.user:
+            remove_online_user(self.user.id)
+            await self.broadcast_status()
 
     # ----------------- Event Handlers -----------------
     async def new_message_notification(self, event):
