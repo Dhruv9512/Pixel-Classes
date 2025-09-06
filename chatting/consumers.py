@@ -217,6 +217,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         self.group_name = f"user_notifications_{self.user.id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+
+        unseen_count = await self.get_total_unseen_count(self.user.id)
+        await self.send(text_data=json.dumps({
+            "type": "unread_count",
+            "total_unseen_count": unseen_count
+        }))
         logger.info(f"[NOTIFICATION CONNECT] User {self.user.username} connected to notifications")
 
     async def disconnect(self, close_code):
