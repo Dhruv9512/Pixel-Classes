@@ -7,18 +7,14 @@ from django.utils import timezone
 from .models import Message
 import hashlib
 from .tasks import send_unseen_message_email_task
-from datetime import datetime
 import pytz
 from django.core.cache import cache
-from user.utils import user_cache_key
-from datetime import timedelta
-from django.utils.timezone import now
-from asgiref.sync import async_to_sync
 
-
+# Utility functions
 def get_current_datetime():
+    """Return current IST datetime as string."""
     ist = pytz.timezone('Asia/Kolkata')
-    return datetime.now(ist).strftime("%Y-%m-%d %I:%M %p")
+    return timezone.now().astimezone(ist).strftime("%Y-%m-%d %I:%M %p")
 
 def get_safe_group_name(room_name):
     """Convert any room name to a safe ASCII string using SHA-256"""
@@ -26,13 +22,12 @@ def get_safe_group_name(room_name):
     return f"chat_{hashed}"
 
 
-
-# chatting level room
+# Chat room-level consumer
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         raw_room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
-        self.room_name = raw_room_name  # Display/DB version
-        self.room_group_name = get_safe_group_name(self.room_name)  # Channels-safe version
+        self.room_name = raw_room_name
+        self.room_group_name = get_safe_group_name(self.room_name)
 
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -58,20 +53,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.handle_seen_event(data)
 
             else:
-                await self.send(text_data=json.dumps({
-                    "error": "Invalid event type"
-                }))
+                await self.send(text_data=json.dumps({"error": "Invalid event type"}))
 
         except Exception as e:
-            await self.send(text_data=json.dumps({
-                "error": str(e)
-            }))
+            await self.send(text_data=json.dumps({"error": str(e)}))
 
+    # ----------------- Handlers -----------------
     async def handle_chat_message(self, data):
         sender_username = data.get('sender')
         receiver_username = data.get('receiver')
         message = data.get('message')
-        temp_id = data.get('tempId') 
+        temp_id = data.get('tempId')
 
         if not sender_username or not receiver_username or not message:
             await self.send(json.dumps({"error": "Missing sender, receiver, or message"}))
@@ -79,6 +71,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         saved_message = await self.save_message(sender_username, receiver_username, message)
 
+        # Broadcast to chat room
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -87,10 +80,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': sender_username,
                 'receiver': receiver_username,
                 'message': message,
-                'temp_id': temp_id  
+                'temp_id': temp_id
             }
         )
 
+        # Broadcast to sender & receiver user notifications
+        await self.send_user_notifications(saved_message)
 
     async def handle_seen_event(self, data):
         message_id = data.get('message_id')
@@ -108,6 +103,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
+    # ----------------- WebSocket event handlers -----------------
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat',
@@ -115,9 +111,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender': event['sender'],
             'receiver': event['receiver'],
             'message': event['message'],
-            'temp_id': event.get('temp_id')  
+            'temp_id': event.get('temp_id')
         }))
-
 
     async def message_seen(self, event):
         await self.send(text_data=json.dumps({
@@ -130,14 +125,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             "type": "edit",
             "id": event["id"],
             "new_content": event["new_content"]
-    }))
-        
+        }))
+
     async def delete_message(self, event):
         await self.send(text_data=json.dumps({
             "type": "delete",
             "id": event["id"]
         }))
 
+    # ----------------- DB operations -----------------
     @database_sync_to_async
     def save_message(self, sender_username, receiver_username, message):
         sender = User.objects.filter(username=sender_username).first()
@@ -148,66 +144,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not receiver:
             raise ValueError(f"Receiver '{receiver_username}' does not exist.")
 
-        # Save the message in DB
         msg = Message.objects.create(
             sender=sender,
             receiver=receiver,
             content=message
         )
 
-        # Schedule email for unseen messages
+        # Schedule email if not already scheduled
         cache_key = f"email_scheduled_receiver_{receiver.id}"
         if not cache.get(cache_key):
             send_unseen_message_email_task.apply_async(
                 args=(sender.id, receiver.id),
-                countdown=3600  # wait 1 hour to batch messages
+                countdown=3600
             )
             cache.set(cache_key, True, timeout=4500)
 
-        # --- New: Broadcast to chat room ---
-        async_to_sync(self.channel_layer.group_send)(
-            self.room_group_name,
-            {
-                'type': 'chat_message',  # triggers chat_message method in ChatConsumer
-                'id': msg.id,
-                'sender': sender.username,
-                'receiver': receiver.username,
-                'message': message,
-            }
-        )
-
-        # --- New: Broadcast to user-level notifications ---
-        # Sender's notification channel
-        async_to_sync(self.channel_layer.group_send)(
-            f"user_notifications_{sender.id}",
-            {
-                'type': 'new_message_notification',  # triggers new_message_notification method
-                'id': msg.id,
-                'sender': sender.username,
-                'receiver': receiver.username,
-                'message': message,
-                'timestamp': msg.timestamp,
-                'is_seen': msg.is_seen,
-                'unseen_count': Message.objects.filter(receiver=sender, is_seen=False).count(),
-            }
-        )
-        # Receiver's notification channel
-        async_to_sync(self.channel_layer.group_send)(
-            f"user_notifications_{receiver.id}",
-            {
-                'type': 'new_message_notification',
-                'id': msg.id,
-                'sender': sender.username,
-                'receiver': receiver.username,
-                'message': message,
-                'timestamp': msg.timestamp,
-                'is_seen': msg.is_seen,
-                'unseen_count': Message.objects.filter(receiver=receiver, is_seen=False).count(),
-            }
-        )
-
         return msg
-
 
     @database_sync_to_async
     def mark_message_seen(self, message_id):
@@ -217,25 +169,40 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.seen_at = get_current_datetime()
             msg.save()
 
+    async def send_user_notifications(self, message_obj):
+        sender = message_obj.sender
+        receiver = message_obj.receiver
+
+        for user in [sender, receiver]:
+            await self.channel_layer.group_send(
+                f"user_notifications_{user.id}",
+                {
+                    'type': 'new_message_notification',
+                    'id': message_obj.id,
+                    'sender': sender.username,
+                    'receiver': receiver.username,
+                    'message': message_obj.content,
+                    'timestamp': str(message_obj.timestamp),
+                    'is_seen': message_obj.is_seen,
+                    'unseen_count': await self.get_unseen_count(user)
+                }
+            )
+
+    @database_sync_to_async
+    def get_unseen_count(self, user):
+        return Message.objects.filter(receiver=user, is_seen=False).count()
 
 
-# User  level room
-# consumers.py
-import json
-from channels.generic.websocket import AsyncWebsocketConsumer
-
+# ----------------- User-level notifications -----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Get the user from scope (requires AuthMiddlewareStack)
         self.user = self.scope.get("user")
         if not self.user or self.user.is_anonymous:
             await self.close()
             return
 
-        # Unique group name per user
         self.group_name = f"user_notifications_{self.user.id}"
 
-        # Add this connection to the group
         await self.channel_layer.group_add(
             self.group_name,
             self.channel_name
@@ -248,20 +215,17 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-
     async def new_message_notification(self, event):
-        # Example event structure for modern chat app
         payload = {
             'type': 'new_message_notification',
             'id': event.get('id'),
             'sender': event.get('sender'),
             'receiver': event.get('receiver'),
             'message': event.get('message'),
-            'message_type': event.get('message_type', 'text'),  # text, image, video
-            'timestamp': event.get('timestamp'),  # datetime string
+            'timestamp': event.get('timestamp'),
             'is_seen': event.get('is_seen', False),
-            'reactions': event.get('reactions', []),  # list of reactions
-            'unseen_count': event.get('unseen_count', 0),  # for inbox preview
+            'unseen_count': event.get('unseen_count', 0),
         }
         await self.send(text_data=json.dumps(payload))
+
 
