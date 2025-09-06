@@ -232,9 +232,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def broadcast_status(self):
         try:
-            online_ids = get_online_users()
+            online_ids = await get_online_users()  # <-- await here
             logger.info(f"[BROADCAST STATUS] Online users: {online_ids}")
+
             all_users = await self.get_all_users()
+            all_users = list(all_users)  # force evaluation, safe for async
+
             for user in all_users:
                 await self.channel_layer.group_send(
                     f"user_notifications_{user.id}",
@@ -246,6 +249,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             logger.info("[BROADCAST STATUS] Status broadcast completed")
         except Exception as e:
             logger.exception(f"[BROADCAST STATUS] Exception: {e}")
+
 
     @database_sync_to_async
     def get_user_from_token(self, token_key):
@@ -267,6 +271,6 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_all_users(self):
-        users = User.objects.all()
-        logger.info(f"[USERS] Fetched {users.count()} users from DB")
+        users = list(User.objects.all())
+        logger.info(f"[USERS] Fetched {len(users)} users from DB")
         return users
