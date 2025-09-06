@@ -248,3 +248,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
             return None
+    @database_sync_to_async
+    def get_total_unseen_count(self, user_id):
+        return Message.objects.filter(receiver_id=user_id, is_seen=False).count()
+
