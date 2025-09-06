@@ -198,8 +198,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_total_unseen_count(self, user_id):
-        return Message.objects.filter(receiver_id=user_id, is_seen=False).count()
+        unseen_messages = Message.objects.filter(
+            receiver_id=user_id, is_seen=False
+        )
 
+        # group by sender_id (or any other logic you want)
+        groups = {}
+        for msg in unseen_messages:
+            key = msg.sender_id   
+            groups[key] = True
+
+        return len(groups)
 
 # ---------------- NotificationConsumer ----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
@@ -220,7 +229,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         unseen_count = await self.get_total_unseen_count(self.user.id)
         await self.send(text_data=json.dumps({
-            "type": "unread_count",
+            "type": "total_unseen_count",
             "total_unseen_count": unseen_count
         }))
         logger.info(f"[NOTIFICATION CONNECT] User {self.user.username} connected to notifications")
@@ -250,5 +259,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return None
     @database_sync_to_async
     def get_total_unseen_count(self, user_id):
-        return Message.objects.filter(receiver_id=user_id, is_seen=False).count()
+        unseen_messages = Message.objects.filter(
+            receiver_id=user_id, is_seen=False
+        )
+
+        # group by sender_id (or any other logic you want)
+        groups = {}
+        for msg in unseen_messages:
+            key = msg.sender_id   
+            groups[key] = True
+
+        return len(groups)  
 
