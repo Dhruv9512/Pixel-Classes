@@ -1,5 +1,6 @@
 import json
-from urllib.parse import unquote
+import logging
+from urllib.parse import unquote, parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import User
 from channels.db import database_sync_to_async
@@ -9,69 +10,47 @@ import hashlib
 from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
-from asgiref.sync import async_to_sync
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.exceptions import ObjectDoesNotExist
-import logging
+from asgiref.sync import async_to_sync
 
+# ---------------- Logging ----------------
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
-# ----------------- DB cache key -----------------
-ONLINE_USERS_KEY = "online_users"  # store list of online user IDs
-
-# ----------------- Utility functions -----------------
+# ---------------- Utility functions ----------------
 def get_current_datetime():
     """Return current IST datetime as string."""
     ist = pytz.timezone('Asia/Kolkata')
     return timezone.now().astimezone(ist).strftime("%Y-%m-%d %I:%M %p")
 
 def get_safe_group_name(room_name):
-    """Convert room name to safe ASCII string using SHA-256"""
+    """Convert any room name to a safe ASCII string using SHA-256"""
     hashed = hashlib.sha256(room_name.encode()).hexdigest()
     return f"chat_{hashed}"
 
-# ----------------- DB cache helpers -----------------
-from asgiref.sync import sync_to_async
 
-# Async versions
-add_online_user = sync_to_async(lambda user_id: _add_online_user(user_id))
-remove_online_user = sync_to_async(lambda user_id: _remove_online_user(user_id))
-get_online_users = sync_to_async(lambda: _get_online_users())
-
-# Original synchronous implementations
-def _add_online_user(user_id):
-    users = cache.get("online_users", [])
-    if user_id not in users:
-        users.append(user_id)
-        cache.set("online_users", users)
-
-def _remove_online_user(user_id):
-    users = cache.get("online_users", [])
-    if user_id in users:
-        users.remove(user_id)
-        cache.set("online_users", users)
-
-def _get_online_users():
-    return cache.get("online_users", [])
-
-
-# ----------------- Chat Room Consumer -----------------
+# ---------------- ChatConsumer ----------------
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         raw_room_name = unquote(self.scope['url_route']['kwargs']['room_name'])
         self.room_name = raw_room_name
         self.room_group_name = get_safe_group_name(self.room_name)
+        logger.info(f"[WS CONNECT] Connecting to room: {self.room_name} -> Group: {self.room_group_name}")
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
+        logger.info(f"[WS CONNECT] Connection accepted for room: {self.room_name}")
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        logger.info(f"[WS DISCONNECT] Disconnected from room: {self.room_name}, code: {close_code}")
 
     async def receive(self, text_data):
         try:
             data = json.loads(text_data)
             event_type = data.get("type")
+            logger.info(f"[WS RECEIVE] Event type: {event_type}, Data: {data}")
 
             if event_type == "chat":
                 await self.handle_chat_message(data)
@@ -79,10 +58,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.handle_seen_event(data)
             else:
                 await self.send(text_data=json.dumps({"error": "Invalid event type"}))
+                logger.warning(f"[WS RECEIVE] Invalid event type: {event_type}")
+
         except Exception as e:
             await self.send(text_data=json.dumps({"error": str(e)}))
+            logger.error(f"[WS RECEIVE] Exception: {e}", exc_info=True)
 
-    # ----------------- Handlers -----------------
+    # ---------------- Handlers ----------------
     async def handle_chat_message(self, data):
         sender_username = data.get('sender')
         receiver_username = data.get('receiver')
@@ -91,11 +73,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if not sender_username or not receiver_username or not message:
             await self.send(json.dumps({"error": "Missing sender, receiver, or message"}))
+            logger.warning(f"[CHAT MESSAGE] Missing fields: {data}")
             return
 
         saved_message = await self.save_message(sender_username, receiver_username, message)
+        logger.info(f"[CHAT MESSAGE] Saved message ID: {saved_message.id} from {sender_username} to {receiver_username}")
 
-        # Broadcast to chat room (chat window)
+        # Broadcast to chat room
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -108,13 +92,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
+        # Broadcast to user notifications
+        await self.send_user_notifications(saved_message)
+
     async def handle_seen_event(self, data):
         message_id = data.get('message_id')
         if not message_id:
             await self.send(json.dumps({"error": "Missing message_id"}))
+            logger.warning("[SEEN EVENT] Missing message_id")
             return
 
         await self.mark_message_seen(message_id)
+        logger.info(f"[SEEN EVENT] Message marked as seen: {message_id}")
 
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -124,7 +113,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
-    # ----------------- WebSocket event handlers -----------------
+    # ---------------- WebSocket event handlers ----------------
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat',
@@ -134,48 +123,64 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'temp_id': event.get('temp_id')
         }))
+        logger.info(f"[CHAT BROADCAST] Sent message ID: {event['id']} to WebSocket")
 
     async def message_seen(self, event):
         await self.send(text_data=json.dumps({
             'type': 'seen',
             'message_id': event['message_id']
         }))
+        logger.info(f"[SEEN BROADCAST] Sent seen event for message ID: {event['message_id']}")
 
-    # ----------------- DB operations -----------------
+    async def edit_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "edit",
+            "id": event["id"],
+            "new_content": event["new_content"]
+        }))
+        logger.info(f"[EDIT BROADCAST] Edited message ID: {event['id']}")
+
+    async def delete_message(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "delete",
+            "id": event["id"]
+        }))
+        logger.info(f"[DELETE BROADCAST] Deleted message ID: {event['id']}")
+
+    # ---------------- DB operations ----------------
     @database_sync_to_async
     def save_message(self, sender_username, receiver_username, message):
         sender = User.objects.filter(username=sender_username).first()
         receiver = User.objects.filter(username=receiver_username).first()
 
         if not sender or not receiver:
-            raise ValueError("Sender or Receiver does not exist.")
+            logger.warning(f"[SAVE MESSAGE] Invalid sender or receiver: {sender_username}, {receiver_username}")
+            raise ValueError("Sender or receiver does not exist")
 
         msg = Message.objects.create(sender=sender, receiver=receiver, content=message)
 
-        # Schedule unseen email if not already scheduled
+        # Schedule email if not already scheduled
         cache_key = f"email_scheduled_receiver_{receiver.id}"
         if not cache.get(cache_key):
-            send_unseen_message_email_task.apply_async(
-                args=(sender.id, receiver.id),
-                countdown=3600
-            )
+            send_unseen_message_email_task.apply_async(args=(sender.id, receiver.id), countdown=3600)
             cache.set(cache_key, True, timeout=4500)
+            logger.info(f"[SAVE MESSAGE] Scheduled unseen message email for receiver {receiver.username}")
 
-        # Broadcast user notifications to sender & receiver
-        for user in [sender, receiver]:
-            async_to_sync(self.channel_layer.group_send)(
-                f"user_notifications_{user.id}",
-                {
-                    'type': 'new_message_notification',
-                    'id': msg.id,
-                    'sender': sender.username,
-                    'receiver': receiver.username,
-                    'message': msg.content,
-                    'timestamp': str(msg.timestamp),
-                    'is_seen': msg.is_seen,
-                    'total_unseen_count': Message.objects.filter(receiver=user, is_seen=False).count()
-                }
-            )
+        # Broadcast to user
+        async_to_sync(self.channel_layer.group_send)(
+            f"user_notifications_{receiver.id}",
+            {
+                'type': 'total_unseen_count',
+                'id': msg.id,
+                'sender': sender.username,
+                'receiver': receiver.username,
+                'message': msg.content,
+                'timestamp': str(msg.timestamp),
+                'is_seen': msg.is_seen,
+                'total_unseen_count': Message.objects.filter(receiver=receiver, is_seen=False).count()
+            }
+        )
+        logger.info(f"[SAVE MESSAGE] Broadcasted total_unseen_count for receiver {receiver.username}")
         return msg
 
     @database_sync_to_async
@@ -185,92 +190,48 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.is_seen = True
             msg.seen_at = get_current_datetime()
             msg.save()
+            logger.info(f"[MARK SEEN] Message ID {message_id} marked as seen")
 
-# ----------------- User Notifications Consumer -----------------
+
+# ---------------- NotificationConsumer ----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        logger.info("[WS CONNECT] New connection attempt")
-        self.group_name = None
+        query_string = self.scope["query_string"].decode()
+        query_params = parse_qs(query_string)
+        token_key = query_params.get("token", [None])[0]
 
-        try:
-            query_string = self.scope["query_string"].decode()
-            logger.info(f"[WS CONNECT] Query string: {query_string}")
-
-            from urllib.parse import parse_qs
-            query_params = parse_qs(query_string)
-            token_key = query_params.get("token", [None])[0]
-            logger.info(f"[WS CONNECT] Token key extracted: {token_key}")
-
-            self.user = await self.get_user_from_token(token_key)
-            if not self.user:
-                logger.warning("[WS CONNECT] Invalid or missing user, closing connection")
-                await self.close()
-                return
-
-            self.group_name = f"user_notifications_{self.user.id}"
-            await self.channel_layer.group_add(self.group_name, self.channel_name)
-            await self.accept()
-            logger.info(f"[WS CONNECT] User {self.user.username} connected successfully")
-
-            # Mark user online
-            await add_online_user(self.user.id)
-            await self.broadcast_status()
-
-        except Exception as e:
-            logger.exception(f"[WS CONNECT] Exception during connect: {e}")
+        self.user = await self.get_user_from_token(token_key)
+        if not self.user:
+            logger.warning("[NOTIFICATION CONNECT] Invalid token, closing connection")
             await self.close()
+            return
+
+        self.group_name = f"user_notifications_{self.user.id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        logger.info(f"[NOTIFICATION CONNECT] User {self.user.username} connected to notifications")
 
     async def disconnect(self, close_code):
-        logger.info(f"[WS DISCONNECT] User {getattr(self, 'user', None)} disconnected, code: {close_code}")
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        logger.info(f"[NOTIFICATION DISCONNECT] User {self.user.username} disconnected, code: {close_code}")
 
-        if self.group_name:
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
-
-        if hasattr(self, "user") and self.user:
-            await remove_online_user(self.user.id)
-            await self.broadcast_status()
-
-    async def broadcast_status(self):
-        try:
-            online_ids = await get_online_users()  # <-- await here
-            logger.info(f"[BROADCAST STATUS] Online users: {online_ids}")
-
-            all_users = await self.get_all_users()
-            all_users = list(all_users)  # force evaluation, safe for async
-
-            for user in all_users:
-                await self.channel_layer.group_send(
-                    f"user_notifications_{user.id}",
-                    {
-                        "type": "online_status",
-                        "online_ids": online_ids
-                    }
-                )
-            logger.info("[BROADCAST STATUS] Status broadcast completed")
-        except Exception as e:
-            logger.exception(f"[BROADCAST STATUS] Exception: {e}")
-
+    async def total_unseen_count(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "total_unseen_count",
+            "user_id": self.user.id,
+            "total_unseen_count": event.get("total_unseen_count", 0)
+        }))
+        logger.info(f"[NOTIFICATION BROADCAST] Sent total_unseen_count to user {self.user.username}")
 
     @database_sync_to_async
     def get_user_from_token(self, token_key):
         if not token_key:
-            logger.warning("[TOKEN] No token provided")
             return None
         try:
             validated_token = RefreshToken(token_key)
             user_id = validated_token["user_id"]
             user = User.objects.get(id=user_id)
-            logger.info(f"[TOKEN] Token valid. User ID: {user_id}, Username: {user.username}")
             return user
-        except ObjectDoesNotExist:
-            logger.warning(f"[TOKEN] User with ID {user_id} does not exist")
-            return None
         except Exception as e:
-            logger.exception(f"[TOKEN] Exception decoding token: {e}")
+            logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
             return None
-
-    @database_sync_to_async
-    def get_all_users(self):
-        users = list(User.objects.all())
-        logger.info(f"[USERS] Fetched {len(users)} users from DB")
-        return users
