@@ -186,6 +186,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': sender.username,
                 'receiver': receiver.username,
                 'message': message,
+                'timestamp': msg.timestamp,
+                'is_seen': msg.is_seen,
+                'unseen_count': Message.objects.filter(receiver=sender, is_seen=False).count(),
             }
         )
         # Receiver's notification channel
@@ -197,6 +200,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'sender': sender.username,
                 'receiver': receiver.username,
                 'message': message,
+                'timestamp': msg.timestamp,
+                'is_seen': msg.is_seen,
+                'unseen_count': Message.objects.filter(receiver=receiver, is_seen=False).count(),
             }
         )
 
