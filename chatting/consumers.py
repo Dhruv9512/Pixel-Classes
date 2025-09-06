@@ -11,7 +11,8 @@ import pytz
 from django.core.cache import cache
 from asgiref.sync import async_to_sync
 
-ONLINE_USERS_KEY = "online_users"  # Redis set key to track online users
+# ----------------- DB cache key -----------------
+ONLINE_USERS_KEY = "online_users"  # store list of online user IDs
 
 # ----------------- Utility functions -----------------
 def get_current_datetime():
@@ -20,10 +21,25 @@ def get_current_datetime():
     return timezone.now().astimezone(ist).strftime("%Y-%m-%d %I:%M %p")
 
 def get_safe_group_name(room_name):
-    """Convert any room name to a safe ASCII string using SHA-256"""
+    """Convert room name to safe ASCII string using SHA-256"""
     hashed = hashlib.sha256(room_name.encode()).hexdigest()
     return f"chat_{hashed}"
 
+# ----------------- DB cache helpers -----------------
+def add_online_user(user_id):
+    users = cache.get(ONLINE_USERS_KEY, [])
+    if user_id not in users:
+        users.append(user_id)
+        cache.set(ONLINE_USERS_KEY, users)
+
+def remove_online_user(user_id):
+    users = cache.get(ONLINE_USERS_KEY, [])
+    if user_id in users:
+        users.remove(user_id)
+        cache.set(ONLINE_USERS_KEY, users)
+
+def get_online_users():
+    return cache.get(ONLINE_USERS_KEY, [])
 
 # ----------------- Chat Room Consumer -----------------
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -32,17 +48,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = raw_room_name
         self.room_group_name = get_safe_group_name(self.room_name)
 
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
         try:
@@ -71,7 +81,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         saved_message = await self.save_message(sender_username, receiver_username, message)
 
-        # Broadcast to chat room (for chat window)
+        # Broadcast to chat room (chat window)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -92,7 +102,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         await self.mark_message_seen(message_id)
 
-        # Notify chat room about seen status
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -129,13 +138,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         msg = Message.objects.create(sender=sender, receiver=receiver, content=message)
 
-        # Schedule unseen email
+        # Schedule unseen email if not already scheduled
         cache_key = f"email_scheduled_receiver_{receiver.id}"
         if not cache.get(cache_key):
-            send_unseen_message_email_task.apply_async(args=(sender.id, receiver.id), countdown=3600)
+            send_unseen_message_email_task.apply_async(
+                args=(sender.id, receiver.id),
+                countdown=3600
+            )
             cache.set(cache_key, True, timeout=4500)
 
-        # Broadcast user notifications to both sender & receiver
+        # Broadcast user notifications to sender & receiver
         for user in [sender, receiver]:
             async_to_sync(self.channel_layer.group_send)(
                 f"user_notifications_{user.id}",
@@ -160,11 +172,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.seen_at = get_current_datetime()
             msg.save()
 
-
 # ----------------- User Notifications Consumer -----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Extract token from query string
         query_string = self.scope['query_string'].decode()
         token_key = query_string.split("token=")[1] if query_string.startswith("token=") else None
 
@@ -174,25 +184,18 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return
 
         self.group_name = f"user_notifications_{self.user.id}"
-
-        # Add user to notifications group
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
         # Mark user as online
-        cache.sadd(ONLINE_USERS_KEY, self.user.id)
+        add_online_user(self.user.id)
         await self.broadcast_status()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
         # Mark user as offline
-        cache.srem(ONLINE_USERS_KEY, self.user.id)
+        remove_online_user(self.user.id)
         await self.broadcast_status()
 
     # ----------------- Event Handlers -----------------
@@ -206,9 +209,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     async def broadcast_status(self):
-        online_ids = list(cache.smembers(ONLINE_USERS_KEY))
-        # Broadcast to all users (for simplicity, you may optimize this)
-        all_users = User.objects.all()
+        online_ids = get_online_users()
+        all_users = await self.get_all_users()
         for user in all_users:
             await self.channel_layer.group_send(
                 f"user_notifications_{user.id}",
@@ -218,7 +220,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 }
             )
 
-    # ----------------- Helper -----------------
+    # ----------------- Helpers -----------------
     @database_sync_to_async
     def get_user_from_token(self, token_key):
         from rest_framework.authtoken.models import Token
@@ -226,3 +228,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             return None
         token = Token.objects.filter(key=token_key).first()
         return token.user if token else None
+
+    @database_sync_to_async
+    def get_all_users(self):
+        return User.objects.all()
