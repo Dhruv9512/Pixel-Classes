@@ -179,8 +179,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.group_name = None  # ✅ always define it
 
-        query_string = self.scope['query_string'].decode()
-        token_key = query_string.split("token=")[1] if "token=" in query_string else None
+        query_string = self.scope["query_string"].decode()
+        from urllib.parse import parse_qs
+        query_params = parse_qs(query_string)
+        token_key = query_params.get("token", [None])[0]
+
 
         self.user = await self.get_user_from_token(token_key)
         if not self.user:
@@ -231,17 +234,25 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_user_from_token(self, token_key):
         if not token_key:
+            print("[TOKEN] No token provided")
             return None
         try:
             # Decode JWT access token
             validated_token = AccessToken(token_key)
             user_id = validated_token["user_id"]  # this is standard claim in JWT
             user = User.objects.get(id=user_id)
+            print(f"[TOKEN] Token valid. User ID: {user_id}, Username: {user.username}")
             return user
-        except (ObjectDoesNotExist, Exception):
+        except ObjectDoesNotExist:
+            print(f"[TOKEN] User with ID {user_id} does not exist")
+            return None
+        except Exception as e:
+            print(f"[TOKEN] Exception decoding token: {e}")
             return None
 
 
     @database_sync_to_async
     def get_all_users(self):
-        return User.objects.all()
+        users = User.objects.all()
+        print(f"[USERS] Fetched {users.count()} users from DB")
+        return users
