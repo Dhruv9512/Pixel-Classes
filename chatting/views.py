@@ -14,7 +14,21 @@ from channels.layers import get_channel_layer
 import hashlib
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+import jwt
+from django.conf import settings
+from django.contrib.auth.models import User
+from rest_framework.response import Response
 
+@method_decorator(never_cache, name="dispatch")
+def get_user_from_refresh_token(token):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        if payload.get("token_type") != "refresh":
+            return None  # Only accept refresh tokens
+        user_id = payload.get("user_id")
+        return User.objects.get(id=user_id)
+    except (jwt.ExpiredSignatureError, jwt.DecodeError, User.DoesNotExist):
+        return None
 @method_decorator(never_cache, name="dispatch")
 class ChatMessagesView(APIView):
     def get(self, request, room_name):
@@ -63,19 +77,14 @@ class ChatMessagesView(APIView):
 class EditMessageView(APIView):
     
     def put(self, request, pk):
-        token = request.headers.get("Authorization")  # Expect "Bearer <token>"
+        token = request.headers.get("Authorization")
         if not token:
             return Response({"error": "Token required"}, status=401)
-        token = token.split()[1]
 
-        try:
-            refresh = RefreshToken(token)
-            user_id = refresh["user_id"]
-            sender = User.objects.get(id=user_id)
-        except TokenError:
+        token = token.split()[1]
+        sender = get_user_from_refresh_token(token)
+        if not sender:
             return Response({"error": "Invalid token"}, status=401)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
 
         # Get the message
         try:
@@ -110,19 +119,14 @@ class DeleteMessageView(APIView):
 
       def delete(self, request, pk):
         # Get refresh token from headers
-        token = request.headers.get("Authorization")  # Expect "Bearer <token>"
+        token = request.headers.get("Authorization")
         if not token:
             return Response({"error": "Token required"}, status=401)
-        token = token.split()[1]
 
-        try:
-            refresh = RefreshToken(token)
-            user_id = refresh["user_id"]
-            sender = User.objects.get(id=user_id)
-        except TokenError:
+        token = token.split()[1]
+        sender = get_user_from_refresh_token(token)
+        if not sender:
             return Response({"error": "Invalid token"}, status=401)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
 
         # Get the message
         try:
