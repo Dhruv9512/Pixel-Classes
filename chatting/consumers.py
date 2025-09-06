@@ -9,6 +9,7 @@ import hashlib
 from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
+from rest_framework.authtoken.models import Token
 
 # Utility functions
 def get_current_datetime():
@@ -196,8 +197,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 # ----------------- User-level notifications -----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.user = self.scope.get("user")
-        if not self.user or self.user.is_anonymous:
+        # Extract token from query string
+        query_string = self.scope['query_string'].decode()  # e.g., "token=abc123"
+        token_key = None
+        if query_string.startswith("token="):
+            token_key = query_string.split("token=")[1]
+
+        self.user = await self.get_user_from_token(token_key)
+        if not self.user:
             await self.close()
             return
 
@@ -228,4 +235,13 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }
         await self.send(text_data=json.dumps(payload))
 
-
+    # ----------------- DB helper -----------------
+    @database_sync_to_async
+    def get_user_from_token(self, token_key):
+        if not token_key:
+            return None
+        try:
+            token = Token.objects.get(key=token_key)
+            return token.user
+        except Token.DoesNotExist:
+            return None
