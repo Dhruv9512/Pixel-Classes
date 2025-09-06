@@ -10,6 +10,7 @@ from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
 from rest_framework.authtoken.models import Token
+from asgiref.sync import async_to_sync
 
 # Utility functions
 def get_current_datetime():
@@ -160,6 +161,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             cache.set(cache_key, True, timeout=4500)
 
+
+        # Broadcast the changes to user
+        async_to_sync(self.channel_layer.group_send)(
+            f"user_notifications_{receiver.id}",
+            {
+                'type': 'new_message_notification',
+                'id': msg.id,
+                'sender': sender.username,
+                'receiver': receiver.username,
+                'message': msg.content,
+                'timestamp': str(msg.timestamp),
+                'is_seen': msg.is_seen,
+                'total_unseen_count': Message.objects.filter(receiver=receiver, is_seen=False).count()
+            }
+        )
         return msg
 
     @database_sync_to_async
@@ -170,28 +186,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             msg.seen_at = get_current_datetime()
             msg.save()
 
-    async def send_user_notifications(self, message_obj):
-        sender = message_obj.sender
-        receiver = message_obj.receiver
+    
 
-        for user in [sender, receiver]:
-            await self.channel_layer.group_send(
-                f"user_notifications_{user.id}",
-                {
-                    'type': 'new_message_notification',
-                    'id': message_obj.id,
-                    'sender': sender.username,
-                    'receiver': receiver.username,
-                    'message': message_obj.content,
-                    'timestamp': str(message_obj.timestamp),
-                    'is_seen': message_obj.is_seen,
-                    'unseen_count': await self.get_unseen_count(user)
-                }
-            )
-
-    @database_sync_to_async
-    def get_unseen_count(self, user):
-        return Message.objects.filter(receiver=user, is_seen=False).count()
 
 
 # ----------------- User-level notifications -----------------
@@ -221,27 +217,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             self.group_name,
             self.channel_name
         )
+    
+    async def total_unseen_count(self, text_data):
+        payload = json.loads(text_data)
+        user_id = payload.get("user_id")
 
-    async def new_message_notification(self, event):
-        payload = {
-            'type': 'new_message_notification',
-            'id': event.get('id'),
-            'sender': event.get('sender'),
-            'receiver': event.get('receiver'),
-            'message': event.get('message'),
-            'timestamp': event.get('timestamp'),
-            'is_seen': event.get('is_seen', False),
-            'unseen_count': event.get('unseen_count', 0),
-        }
-        await self.send(text_data=json.dumps(payload))
-
-    # ----------------- DB helper -----------------
-    @database_sync_to_async
-    def get_user_from_token(self, token_key):
-        if not token_key:
-            return None
-        try:
-            token = Token.objects.get(key=token_key)
-            return token.user
-        except Token.DoesNotExist:
-            return None
+        if user_id:
+            total_unseen_count = payload.get("total_unseen_count", 0)
+            await self.send(text_data=json.dumps({
+                "type": "total_unseen_count",
+                "user_id": user_id,
+                "total_unseen_count": total_unseen_count
+            }))

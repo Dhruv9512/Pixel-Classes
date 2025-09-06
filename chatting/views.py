@@ -132,4 +132,3 @@ class DeleteMessageView(APIView):
 
         except Message.DoesNotExist:
             return Response({"error": "Message not found"}, status=status.HTTP_404_NOT_FOUND)
-
