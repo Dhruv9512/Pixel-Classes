@@ -109,7 +109,7 @@ class EditMessageView(APIView):
 class DeleteMessageView(APIView):
     def delete(self, request, pk):
         token = request.headers.get("Authorization")
-        logger.info(f"Delete request for message {pk} with token: {token}")
+        
 
         if not token:
             logger.warning("No token provided")
