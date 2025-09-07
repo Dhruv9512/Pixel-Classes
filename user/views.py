@@ -104,7 +104,7 @@ class VerifyOTPView(APIView):
                 value=str(access_token),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -112,7 +112,7 @@ class VerifyOTPView(APIView):
                 value=str(refresh),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -180,7 +180,7 @@ class GoogleLoginAPIView(APIView):
                 value=str(access_token),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -188,7 +188,7 @@ class GoogleLoginAPIView(APIView):
                 value=str(refresh),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
             return response
@@ -273,7 +273,7 @@ class GoogleSignupAPIView(APIView):
                 value=str(access_token),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -281,7 +281,7 @@ class GoogleSignupAPIView(APIView):
                 value=str(refresh),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -353,7 +353,7 @@ class LoginView(APIView):
                 value=str(access_token),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -361,7 +361,7 @@ class LoginView(APIView):
                 value=str(refresh),
                 httponly=True,
                 secure=False,
-                samesite="None",
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
             logger.info(f"User '{user.username}' logged in successfully")
