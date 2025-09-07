@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from Profile.serializers import CombinedProfileSerializer,UserPostsSerializer,ProfileUpdateSerializer, UserSearchSerializer
 from Profile.models import profile as ProfileModel
 from django.contrib.auth.models import User
@@ -14,16 +15,14 @@ from django.core.cache import cache
 from django.views.decorators.cache import never_cache 
 from django.utils.decorators import method_decorator
 
-class ProfileDetailsView(APIView):
-    def post(self, request):
-        try:
-            # Get username from request
-            username = request.data.get('username')
-            if not username:
-                return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+class ProfileDetailsView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        try:
+            
             # Try to fetch the user
-            user = User.objects.get(username=username)
+            user = request.user
 
             # Try to fetch the profile
             profile_obj = ProfileModel.objects.get(user_obj=user)
@@ -57,10 +56,11 @@ class ProfileDetailsView(APIView):
 
 
 class userPostsView(APIView):
-    def post(self, request):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
         try:
-            username = request.data.get('username')
-          
+            user = request.user
+            username = user.username
             # Fetch posts related to the user
             posts = AnsPdf.objects.filter(name=username)
             serializer = UserPostsSerializer(posts, many=True)
@@ -89,6 +89,7 @@ class userPostsView(APIView):
         
 @method_decorator(never_cache, name="dispatch")
 class UserPostDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
     def delete(self, request):
         try:
             # Get PDF URL from request
@@ -107,8 +108,7 @@ class UserPostDeleteView(APIView):
             # Now delete the database post
             post.delete()
 
-            username = request.get('username')
-            user = User.objects.get(username=username)
+            user = request.user
             cache.delete(user_key(user))
             return Response({"message": "Post and blob deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
@@ -122,19 +122,19 @@ class UserPostDeleteView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class EditProfileView(APIView):
+    permission_classes = [IsAuthenticated]
     def put(self, request):
         try:
-            username = request.data.get('username')
+            
             new_username = request.data.get('new_username')
             profile_pic = request.FILES.get('profile_pic')
             first_name = request.data.get('first_name')
             last_name = request.data.get('last_name')
 
-            if not username:
-                return Response({"error": "Old username is required"}, status=status.HTTP_400_BAD_REQUEST)
-
+           
             # Get user
-            user = User.objects.get(username=username)
+            user = request.user
+            username = user.username
             profile_obj = ProfileModel.objects.get(user_obj=user)
 
             # ✅ Update first and last name
@@ -196,6 +196,7 @@ class EditProfileView(APIView):
 # create a user search view
 @method_decorator(never_cache, name="dispatch")
 class UserSearchView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             users = User.objects.all()
@@ -208,15 +209,17 @@ class UserSearchView(APIView):
 # followe view
 @method_decorator(never_cache, name="dispatch")
 class FollowView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            username = request.data.get('username')
+            user = request.user
+            
             follow_username = request.data.get('follow_username')
 
-            if not username or not follow_username:
-                return Response({"error": "Both usernames are required"}, status=status.HTTP_400_BAD_REQUEST)
+            if not follow_username:
+                return Response({"error": "follow_username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            user = User.objects.get(username=username)
+            
             follow_user = User.objects.get(username=follow_username)
 
             # Get or create Follow instance
@@ -227,7 +230,7 @@ class FollowView(APIView):
 
             cache.delete(user_key(user))
             cache.delete(user_key(follow_user))
-            return Response({"message": f"{username} is now following {follow_username}"}, status=status.HTTP_200_OK)
+            return Response({"message": f"{user.username} is now following {follow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
             return Response({"error": "One or both users not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -237,15 +240,15 @@ class FollowView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class UnfollowView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            username = request.data.get('username')
+            user = request.user
             unfollow_username = request.data.get('unfollow_username')
 
-            if not username or not unfollow_username:
-                return Response({"error": "Username and unfollow_username are required"}, status=status.HTTP_400_BAD_REQUEST)
+            if not unfollow_username:
+                return Response({"error": "unfollow_username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-            user = User.objects.get(username=username)
             unfollow_user = User.objects.get(username=unfollow_username)
 
             # Get Follow objects
@@ -266,10 +269,10 @@ class UnfollowView(APIView):
         
         
 class FollowersView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            username = request.data.get('username')
-            user = User.objects.get(username=username)
+            user=request.user
             follow_obj = Follow.objects.get(user=user)
             followers = follow_obj.followers.all()
             followers_users = [f.user for f in followers]
@@ -284,10 +287,10 @@ class FollowersView(APIView):
         
 
 class FollowingView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            username = request.data.get('username')
-            user = User.objects.get(username=username)
+            user = request.user
             follow_obj = Follow.objects.get(user=user)
             following = follow_obj.following.all()
             following_users = [f.user for f in following]

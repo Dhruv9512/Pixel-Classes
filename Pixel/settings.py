@@ -75,8 +75,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_simplejwt',     
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',      
 ]
+
+
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),      # short-lived access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),         # long-lived refresh token
+    'ROTATE_REFRESH_TOKENS': True,                       # issue new refresh token on refresh
+    'BLACKLIST_AFTER_ROTATION': True,                    # invalidate old refresh tokens
+}
 
 # ----------------------
 # MIDDLEWARE
@@ -171,6 +183,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.AnonRateThrottle',
@@ -181,10 +196,6 @@ REST_FRAMEWORK = {
     },
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-}
 
 # ----------------------
 # CELERY CONFIGURATION

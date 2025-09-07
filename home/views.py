@@ -4,6 +4,7 @@ import user
 from .models import CourseList, QuePdf, AnsPdf , Subject
 from user.models import User
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from django.views.decorators.csrf import csrf_exempt
 from .serializers import CourseListSerializer, QuePdfSerializer, AnsPdfSerializer , SubjectSerializer
 from rest_framework import status
@@ -23,6 +24,7 @@ load_dotenv()
 # ✅ Course List View
 @method_decorator(csrf_exempt, name="dispatch")
 class CoursesView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             course_lists = CourseList.objects.all()
@@ -39,6 +41,7 @@ class CoursesView(APIView):
 # ✅ QuePdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             queryset = QuePdf.objects.all()
@@ -54,6 +57,7 @@ class QuePdfView(APIView):
 # QuePdf View Subject vise
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfSubView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             sub = request.data.get("sub")
@@ -81,6 +85,7 @@ class QuePdfSubView(APIView):
 # Get all subject
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfGetSubView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             course_name = request.data.get("course_name")  
@@ -103,13 +108,14 @@ load_dotenv()
 @method_decorator(never_cache, name="dispatch")
 class AnsPdfUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
-
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             print("\n🔍 Debugging: Received POST request")
 
             # ✅ Extract Data from Request
-            name = request.data.get("name")
+            user = request.user
+            name = user.username
             content = request.data.get("content")
             file = request.FILES.get("pdf")  # Get the uploaded file
             id = request.data.get("id")
@@ -148,8 +154,6 @@ class AnsPdfUploadView(APIView):
             ans_pdf = AnsPdf.objects.create(que_pdf=que_pdf_id, name=name, contant=content, pdf=blob["url"])
             print("✅ File record saved in the database!")
 
-           
-            user = User.objects.get(username=name)
             cache.delete(user_key(user))
             serializer = AnsPdfSerializer(ans_pdf)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -162,6 +166,7 @@ class AnsPdfUploadView(APIView):
 # ✅ AnsPdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
 class AnsPdfView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             id = request.data.get("id")
@@ -181,6 +186,8 @@ class AnsPdfView(APIView):
 @method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(never_cache, name="dispatch")
 class QuePdfAddView(APIView):
+    parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
             name = request.data.get("name")
@@ -213,8 +220,7 @@ class QuePdfAddView(APIView):
                 "course": course_id,  
             })
 
-            username = request.data.get('username')
-            user = User.objects.get(username=username)
+            user = request.user
             cache.delete(user_key(user))
             if serializer.is_valid():
                 serializer.save()
@@ -228,6 +234,7 @@ class QuePdfAddView(APIView):
 # Delete expire cached data
 @method_decorator(csrf_exempt, name="dispatch")
 class CacheCleanupView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         from django.core.cache import cache
         cache.clear_expired()

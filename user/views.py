@@ -1,3 +1,4 @@
+from urllib import response
 from django.contrib.auth import authenticate, login
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -79,7 +80,7 @@ class VerifyOTPView(APIView):
 
             # Send email verification for login
             user_data = RegisterSerializer(user).data
-            send_mail_for_login.apply_async(aargs=[user_data])
+            send_mail_for_login.apply_async(args=[user_data])
 
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
@@ -88,12 +89,26 @@ class VerifyOTPView(APIView):
 
             response_data = {
                 "message": "Login successful!",
-                "access_token": str(access_token),
-                "refresh_token": str(refresh),
+                "status": "true",
             }
             response = Response(response_data, status=status.HTTP_200_OK)
-            response.set_cookie('status', 'true', httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
-            response.set_cookie('username', user.username, httponly=True, max_age=timedelta(days=1))  # Expires in 1 day
+            response.set_cookie(
+                key="access",
+                value=str(access_token),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=15*60  # 15 minutes
+            )
+            response.set_cookie(
+                key="refresh",
+                value=str(refresh),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=7*24*60*60  # 7 days
+            )
+
             logger.info(f"User {user.username} logged in successfully")
             return response
         else:
@@ -137,6 +152,7 @@ class GoogleLoginAPIView(APIView):
 
             # ✅ JWT Token generation
             refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
 
             # ✅ Fire async email (non-blocking)
             try:
@@ -147,12 +163,28 @@ class GoogleLoginAPIView(APIView):
             logger.info(f"User {user_data['username']} logged in via Google.")
 
             # ✅ Return fast response
-            return Response({
+            response =Response({
                 "message": "Login successful!",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
-                "username": user_data['username'],
+                "satus": "true",
             }, status=status.HTTP_200_OK)
+
+            response.set_cookie(
+                key="access",
+                value=str(access_token),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=15*60  # 15 minutes
+            )
+            response.set_cookie(
+                key="refresh",
+                value=str(refresh),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=7*24*60*60  # 7 days
+            )
+            return response
 
         except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
@@ -223,14 +255,30 @@ class GoogleSignupAPIView(APIView):
             # ✅ Log in user & send tokens
             login(request, user)
             refresh = RefreshToken.for_user(user)
-
-            return Response({
+            access_token = refresh.access_token
+            response =Response({
                 "message": "Signup successful!",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
-                "username": user.username,
+                "status": "true",
             }, status=status.HTTP_200_OK)
 
+            response.set_cookie(
+                key="access",
+                value=str(access_token),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=15*60  # 15 minutes
+            )
+            response.set_cookie(
+                key="refresh",
+                value=str(refresh),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=7*24*60*60  # 7 days
+            )
+
+            return response
         except ValueError:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -288,12 +336,26 @@ class LoginView(APIView):
             # Prepare response
             response_data = {
                 "message": "Login successful!",
-                "access_token": str(access_token),
-                "refresh_token": str(refresh),
-                "username": user.username,
+                "status": "true",
             }
 
             response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie(
+                key="access",
+                value=str(access_token),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=15*60  # 15 minutes
+            )
+            response.set_cookie(
+                key="refresh",
+                value=str(refresh),
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=7*24*60*60  # 7 days
+            )
             logger.info(f"User '{user.username}' logged in successfully")
             return response
 
@@ -365,9 +427,6 @@ class RegisterView(APIView):
 
             # Prepare response with secure cookies
             response = Response(serializer.data, status=status.HTTP_201_CREATED)
-            response.set_cookie('status', 'false', httponly=True, max_age=86400, secure=True, samesite='None')
-            response.set_cookie('username', username, httponly=True, max_age=86400, secure=True, samesite='None')
-
             logger.info(f"User '{username}' registered successfully")
             return response
 

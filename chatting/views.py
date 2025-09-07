@@ -7,6 +7,7 @@ from urllib.parse import unquote
 from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from .models import Message
 from .serializers import MessageSerializer
 from asgiref.sync import async_to_sync
@@ -26,6 +27,7 @@ logging.basicConfig(level=logging.INFO)
 
 @method_decorator(never_cache, name='dispatch')
 class ChatMessagesView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, room_name):
         query = request.query_params.get('q')
         logger.info(f"Fetching messages for room: {room_name} with query: {query}")
@@ -67,17 +69,10 @@ class ChatMessagesView(APIView):
             return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def put(self, request, pk):
-        token = request.headers.get("Authorization")
-
-        if not token:
-            logger.warning("No token provided")
-            return Response({"error": "Token required"}, status=401)
-
-        token = token.split()[1]
-        refresh_token = RefreshToken(token)
-        user_id = refresh_token["user_id"]
-        sender = User.objects.get(id=user_id)
+        sender = request.user
         if not sender:
             logger.warning("Invalid token")
             return Response({"error": "Invalid token"}, status=401)
@@ -117,17 +112,7 @@ class EditMessageView(APIView):
 @method_decorator(never_cache, name="dispatch")
 class DeleteMessageView(APIView):
     def delete(self, request, pk):
-        token = request.headers.get("Authorization")
-        
-
-        if not token:
-            logger.warning("No token provided")
-            return Response({"error": "Token required"}, status=401)
-
-        token = token.split()[1]
-        refersh_token = RefreshToken(token)
-        user_id = refersh_token["user_id"]
-        sender = User.objects.get(id=user_id)
+        sender = request.user
         if not sender:
             logger.warning("Invalid token")
             return Response({"error": "Invalid token"}, status=401)
