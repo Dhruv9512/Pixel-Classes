@@ -62,7 +62,7 @@ class CookieTokenRefreshView(APIView):
 
 
 
-class MeView(APIView):
+class MeApiView(APIView):
     """
     Returns authenticated user's info.
     Requires a valid access token in HttpOnly cookie.
