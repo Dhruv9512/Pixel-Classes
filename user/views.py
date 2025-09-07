@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # OTP Verification View
 @method_decorator(never_cache, name="dispatch")
 class VerifyOTPView(APIView):
+    permission_classes = [AllowAny] 
     @csrf_exempt  # Exempt CSRF for this endpoint
     def post(self, request):
         # Deserialize incoming OTP data
@@ -289,6 +290,7 @@ class GoogleSignupAPIView(APIView):
 # Login View
 @method_decorator(never_cache, name='dispatch')
 class LoginView(APIView):
+    permission_classes = [AllowAny] 
     @csrf_exempt
     def post(self, request):
         """Authenticate and login user, send verification email."""
@@ -366,6 +368,7 @@ class LoginView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class RegisterView(APIView):
+    permission_classes = [AllowAny] 
     @csrf_exempt
     def post(self, request):
         """Register a new user and send OTP verification email."""
@@ -439,7 +442,7 @@ class RegisterView(APIView):
 @method_decorator(never_cache, name="dispatch")
 class ResendOTPView(APIView):
     """View to resend OTP to the user."""
-
+    permission_classes = [AllowAny]
     @csrf_exempt
     def post(self, request):
         username = request.data.get('username')
@@ -473,6 +476,7 @@ class ResendOTPView(APIView):
 # PasswordResetRequestView
 @method_decorator(never_cache, name="dispatch")
 class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
     @csrf_exempt
     def post(self, request):
         email = request.data.get('email')
@@ -511,6 +515,7 @@ class PasswordResetRequestView(APIView):
 # PasswordResetConfirmView
 @method_decorator(never_cache, name="dispatch")
 class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
     @csrf_exempt
     def get(self, request, user_id, token):
         try:
@@ -552,6 +557,7 @@ class PasswordResetConfirmView(APIView):
 # SubmitNewPasswordView
 @method_decorator(never_cache, name="dispatch")
 class SubmitNewPasswordView(APIView):
+    permission_classes = [AllowAny]
     @csrf_exempt
     def post(self, request):
         serializer = PasswordResetSerializer(data=request.data)
@@ -590,6 +596,7 @@ class SubmitNewPasswordView(APIView):
 # PasswordResetStatusView
 @method_decorator(never_cache, name="dispatch")
 class PasswordResetStatusView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         email = request.data.get('email')
         
@@ -638,6 +645,7 @@ from django.template.loader import render_to_string
 
 @method_decorator(never_cache, name="dispatch")
 class SendCuteEmail(APIView):
+    permission_classes = [AllowAny]
     def get(self, request):
         try:
             # Email details
