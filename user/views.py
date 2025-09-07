@@ -119,6 +119,8 @@ class GoogleLoginAPIView(APIView):
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
             email = idinfo.get('email')
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -179,6 +181,8 @@ class GoogleSignupAPIView(APIView):
             )
 
             email = idinfo.get('email')
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                    return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -253,6 +257,8 @@ class LoginView(APIView):
             # Check if the user exists
             try:
                 user = User.objects.get(username=username)
+                if user.email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                    return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             except User.DoesNotExist:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -311,7 +317,8 @@ class RegisterView(APIView):
             profile_pic = request.data.get('profile_pic', "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp")
             course = request.data.get('course', "B.C.A")
             password = request.data.get('password')
-
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not profile_pic == "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp":
                 blob = put(
                     f"Profile/{profile_pic.name}",
