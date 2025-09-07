@@ -160,7 +160,12 @@ def send_password_reset_email(user_data=None):
 
 from hashlib import md5
 
-def user_cache_key(user):
-    """Generate a cache key for a User object."""
+def user_cache_key(request, key_prefix, cache_key):
+    user_id = request.user.pk if request.user.is_authenticated else "anon"
+    key = f"user_cache:{user_id}"
+    return md5(key.encode("utf-8")).hexdigest()
+
+def user_key(user):
     key = f"user_cache:{user.pk}"
-    return md5(key.encode('utf-8')).hexdigest()
+    return md5(key.encode("utf-8")).hexdigest()
+

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 from .models import get_current_date, get_current_time
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
-from user.utils import user_cache_key   # or any key function you are using
+from user.utils import user_key   # or any key function you are using
 
 # Load environment variables
 load_dotenv()
@@ -150,7 +150,7 @@ class AnsPdfUploadView(APIView):
 
            
             user = User.objects.get(username=name)
-            cache.delete(user_cache_key(user))
+            cache.delete(user_key(user))
             serializer = AnsPdfSerializer(ans_pdf)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -215,7 +215,7 @@ class QuePdfAddView(APIView):
 
             username = request.data.get('username')
             user = User.objects.get(username=username)
-            cache.delete(user_cache_key(user))
+            cache.delete(user_key(user))
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)

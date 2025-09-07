@@ -22,7 +22,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-@method_decorator(never_cache, name="dispatch")
 class ChatMessagesView(APIView):
     def get(self, request, room_name):
         query = request.query_params.get('q')

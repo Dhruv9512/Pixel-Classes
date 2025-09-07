@@ -11,6 +11,7 @@ from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
+from user.utils import user_key
 
 # ---------------- Logging ----------------
 logger = logging.getLogger(__name__)
@@ -164,6 +165,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             cache.set(cache_key, True, timeout=4500)
             logger.info(f"[SAVE MESSAGE] Scheduled unseen message email for receiver {receiver.username}")
 
+        # Delete cache of sender and receiver
+        cache.delete(user_key(sender))
+        cache.delete(user_key(receiver))
         return msg
 
     @database_sync_to_async

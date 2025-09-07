@@ -8,7 +8,7 @@ from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
 from vercel_blob import delete  as del_, put
 
-from user.utils import user_cache_key
+from user.utils import user_key
 from .models import Follow
 from django.core.cache import cache
 from django.views.decorators.cache import never_cache 
@@ -109,7 +109,7 @@ class UserPostDeleteView(APIView):
 
             username = request.get('username')
             user = User.objects.get(username=username)
-            cache.delete(user_cache_key(user))
+            cache.delete(user_key(user))
             return Response({"message": "Post and blob deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
         except AnsPdf.DoesNotExist:
@@ -177,7 +177,7 @@ class EditProfileView(APIView):
                     serializer.save()
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            cache.delete(user_cache_key(user))
+            cache.delete(user_key(user))
 
             return Response({
                 "message": "Profile updated successfully",
@@ -225,8 +225,8 @@ class FollowView(APIView):
 
             user_follow_obj.following.add(follow_user_obj)
 
-            cache.delete(user_cache_key(user))
-            cache.delete(user_cache_key(follow_user))
+            cache.delete(user_key(user))
+            cache.delete(user_key(follow_user))
             return Response({"message": f"{username} is now following {follow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
@@ -253,8 +253,8 @@ class UnfollowView(APIView):
             unfollow_follow_instance = Follow.objects.get(user=unfollow_user)
         
             follow_instance.following.remove(unfollow_follow_instance)
-            cache.delete(user_cache_key(user))
-            cache.delete(user_cache_key(unfollow_user))
+            cache.delete(user_key(user))
+            cache.delete(user_key(unfollow_user))
             return Response({"message": f"Unfollowed {unfollow_username}"}, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
