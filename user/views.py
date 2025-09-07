@@ -30,9 +30,15 @@ from google.auth.transport.requests import Request
 from vercel_blob import put 
 from django.views.decorators.cache import never_cache 
 
+# Define COOKIE_SECURE or import from settings
+from django.conf import settings
+COOKIE_SECURE = settings.COOKIE_SECURE
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
 
 # OTP Verification View
 @method_decorator(never_cache, name="dispatch")
@@ -97,7 +103,7 @@ class VerifyOTPView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -105,7 +111,7 @@ class VerifyOTPView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -173,7 +179,7 @@ class GoogleLoginAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -181,7 +187,7 @@ class GoogleLoginAPIView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -266,7 +272,7 @@ class GoogleSignupAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -274,7 +280,7 @@ class GoogleSignupAPIView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -346,7 +352,7 @@ class LoginView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -354,7 +360,7 @@ class LoginView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
+                secure=COOKIE_SECURE,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )

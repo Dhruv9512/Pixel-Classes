@@ -20,6 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-development-key")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
+# Decide cookie security dynamically
+COOKIE_SECURE = False if DEBUG else True
+
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="pixel-classes.onrender.com,127.0.0.1,localhost",
