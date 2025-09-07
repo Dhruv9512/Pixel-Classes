@@ -90,11 +90,9 @@ def que_pdf_notification(sender, instance, created, **kwargs):
             instance_data = serializer.data  
 
             instance_data["pdf_link"] = (
-                f"https://pixelclass.netlify.app/ns?"
-                f"sub={urllib.parse.quote(str(getattr(instance, 'sub', '')))}"
-                f"&id={instance.id}"
-                f"&course={urllib.parse.quote(str(getattr(instance, 'course', '')))}"
-                f"&choose={urllib.parse.quote(str(getattr(instance, 'choose', '')))}"
+                f"https://pixelclass.netlify.app/"
+                f"/{urllib.parse.quote(str(getattr(instance, 'sem', '')))}"
+                f"/{urllib.parse.quote(str(getattr(instance, 'sub', '')))}"
             )
 
 
