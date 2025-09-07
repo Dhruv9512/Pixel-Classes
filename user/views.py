@@ -103,7 +103,7 @@ class VerifyOTPView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -111,7 +111,7 @@ class VerifyOTPView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -179,7 +179,7 @@ class GoogleLoginAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -187,7 +187,7 @@ class GoogleLoginAPIView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -272,7 +272,7 @@ class GoogleSignupAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -280,7 +280,7 @@ class GoogleSignupAPIView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
@@ -352,7 +352,7 @@ class LoginView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=15*60  # 15 minutes
             )
@@ -360,7 +360,7 @@ class LoginView(APIView):
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=COOKIE_SECURE,
+                secure=False,
                 samesite="None",
                 max_age=7*24*60*60  # 7 days
             )
