@@ -15,13 +15,16 @@ import hashlib
 import jwt
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.cache import cache
 
 # Set up logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+# per room cach
 
+@method_decorator(never_cache, name='dispatch')
 class ChatMessagesView(APIView):
     def get(self, request, room_name):
         query = request.query_params.get('q')
@@ -36,6 +39,12 @@ class ChatMessagesView(APIView):
             user2 = User.objects.get(username=username2)
             logger.info(f"Users found: {user1.username}, {user2.username}")
 
+            # Room-based cache key
+            cache_key = f"chat_messages:{user1.username}__{user2.username}:{query or ''}"
+            messages_data = cache.get(cache_key)
+            if messages_data:
+                return Response(messages_data)
+
             messages = Message.objects.filter(
                 Q(sender=user1, receiver=user2) | Q(sender=user2, receiver=user1)
             )
@@ -45,6 +54,9 @@ class ChatMessagesView(APIView):
 
             messages = messages.order_by('timestamp')
             serializer = MessageSerializer(messages, many=True)
+
+            # Store in cache for 5 minutes
+            cache.set(cache_key, serializer.data, timeout=300)
             return Response(serializer.data)
 
         except User.DoesNotExist:
@@ -53,8 +65,6 @@ class ChatMessagesView(APIView):
         except ValueError:
             logger.error("Invalid room name format")
             return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
-
-
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
     def put(self, request, pk):

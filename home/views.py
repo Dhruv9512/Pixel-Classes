@@ -223,4 +223,12 @@ class QuePdfAddView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
+
+# Delete expire cached data
+@method_decorator(csrf_exempt, name="dispatch")
+class CacheCleanupView(APIView):
+    def post(self, request):
+        from django.core.cache import cache
+        cache.clear_expired()
+        return Response({"status": "Cache cleanup task started"}, status=status.HTTP_202_ACCEPTED)

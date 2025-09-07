@@ -165,16 +165,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
             cache.set(cache_key, True, timeout=4500)
             logger.info(f"[SAVE MESSAGE] Scheduled unseen message email for receiver {receiver.username}")
 
-        # Delete cache of sender and receiver
-        room_name = f"{sender.username}__{receiver.username}"
-        cache_key = f"chat_messages:{room_name}:"
-        cache.delete(cache_key)
-
-        # also delete reverse order
-        room_name2 = f"{receiver.username}__{sender.username}"
-        cache_key2 = f"chat_messages:{room_name2}:"
-        cache.delete(cache_key2)
-
+       
+        # Clear room cache so new messages appear
+        room_cache_key1 = f"chat_messages:{sender.username}__{receiver.username}:"
+        room_cache_key2 = f"chat_messages:{receiver.username}__{sender.username}:"
+        cache.delete(room_cache_key1)
+        cache.delete(room_cache_key2)
         return msg
 
     @database_sync_to_async
