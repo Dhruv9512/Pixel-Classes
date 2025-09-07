@@ -111,6 +111,7 @@ class EditMessageView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class DeleteMessageView(APIView):
+    permission_classes = [IsAuthenticated]
     def delete(self, request, pk):
         sender = request.user
         if not sender:
