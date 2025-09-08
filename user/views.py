@@ -103,16 +103,16 @@ class VerifyOTPView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -179,16 +179,16 @@ class GoogleLoginAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
             return response
@@ -272,16 +272,16 @@ class GoogleSignupAPIView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -352,16 +352,16 @@ class LoginView(APIView):
                 key="access",
                 value=str(access_token),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
                 key="refresh",
                 value=str(refresh),
                 httponly=True,
-                secure=True,
-                samesite="None",
+                secure=False,
+                samesite="Lax",
                 max_age=7*24*60*60  # 7 days
             )
             logger.info(f"User '{user.username}' logged in successfully")
