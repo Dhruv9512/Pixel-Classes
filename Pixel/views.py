@@ -36,26 +36,44 @@ class CookieTokenRefreshView(APIView):
             response = Response({
                 "message": "Tokens refreshed successfully"
             }, status=status.HTTP_200_OK)
+secure = True if not settings.DEBUG else False
 
-            # Set access token cookie (15 min)
-            response.set_cookie(
-                key='access',
-                value=new_access,
-                httponly=True,
-                secure=True,
-                samesite='None',  
-                max_age=15*60,
-            )
+response.set_cookie(
+    key='access',
+    value=new_access,
+    httponly=True,
+    secure=secure,
+    samesite='None' if not settings.DEBUG else 'Lax',
+    max_age=15*60,
+)
+response.set_cookie(
+    key='refresh',
+    value=new_refresh,
+    httponly=True,
+    secure=secure,
+    samesite='None' if not settings.DEBUG else 'Lax',
+    max_age=7*24*60*60,
+)
 
-            # Set refresh token cookie (7 days)
-            response.set_cookie(
-                key='refresh',
-                value=new_refresh,
-                httponly=True,
-                secure=True,
-                samesite='None',  
-                max_age=7*24*60*60,
-            )
+            # # Set access token cookie (15 min)
+            # response.set_cookie(
+            #     key='access',
+            #     value=new_access,
+            #     httponly=True,
+            #     secure=True,
+            #     samesite='None',  
+            #     max_age=15*60,
+            # )
+
+            # # Set refresh token cookie (7 days)
+            # response.set_cookie(
+            #     key='refresh',
+            #     value=new_refresh,
+            #     httponly=True,
+            #     secure=True,
+            #     samesite='None',  
+            #     max_age=7*24*60*60,
+            # )
 
             return response
 
