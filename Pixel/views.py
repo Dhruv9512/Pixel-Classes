@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
-frontend_domain = "pixelclass.netlify.app"
+
 @method_decorator(csrf_exempt, name='dispatch')
 class CookieTokenRefreshView(APIView):
     """
@@ -43,8 +43,7 @@ class CookieTokenRefreshView(APIView):
                 value=new_access,
                 httponly=True,
                 secure=True,
-                samesite='None',
-                domain=frontend_domain,  
+                samesite='None',  
                 max_age=15*60,
             )
 
@@ -54,8 +53,7 @@ class CookieTokenRefreshView(APIView):
                 value=new_refresh,
                 httponly=True,
                 secure=True,
-                samesite='None',
-                domain=frontend_domain,  
+                samesite='None',  
                 max_age=7*24*60*60,
             )
 

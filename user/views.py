@@ -32,13 +32,12 @@ from django.views.decorators.cache import never_cache
 
 # Define COOKIE_SECURE or import from settings
 from django.conf import settings
-COOKIE_SECURE = settings.COOKIE_SECURE
+
 
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-frontend_domain = "pixelclass.netlify.app"
 
 # OTP Verification View
 @method_decorator(never_cache, name="dispatch")
@@ -106,7 +105,6 @@ class VerifyOTPView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -116,7 +114,6 @@ class VerifyOTPView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -186,7 +183,6 @@ class GoogleLoginAPIView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -196,7 +192,6 @@ class GoogleLoginAPIView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=7*24*60*60  # 7 days
             )
             return response
@@ -283,7 +278,6 @@ class GoogleSignupAPIView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -293,7 +287,6 @@ class GoogleSignupAPIView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -367,7 +360,6 @@ class LoginView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -377,7 +369,6 @@ class LoginView(APIView):
                 secure=True,
                 samesite="None",
                 path="/",
-                domain=frontend_domain,
                 max_age=7*24*60*60  # 7 days
             )
             logger.info(f"User '{user.username}' logged in successfully")
