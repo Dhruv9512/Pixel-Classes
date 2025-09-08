@@ -104,7 +104,6 @@ class VerifyOTPView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -113,7 +112,6 @@ class VerifyOTPView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -182,7 +180,6 @@ class GoogleLoginAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -191,7 +188,6 @@ class GoogleLoginAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=7*24*60*60  # 7 days
             )
             return response
@@ -277,7 +273,6 @@ class GoogleSignupAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -286,7 +281,6 @@ class GoogleSignupAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=7*24*60*60  # 7 days
             )
 
@@ -359,7 +353,6 @@ class LoginView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=15*60  # 15 minutes
             )
             response.set_cookie(
@@ -368,7 +361,6 @@ class LoginView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                path="/",
                 max_age=7*24*60*60  # 7 days
             )
             logger.info(f"User '{user.username}' logged in successfully")
