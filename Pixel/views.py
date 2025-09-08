@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+
+frontend_domain = "pixelclass.netlify.app"
 @method_decorator(csrf_exempt, name='dispatch')
 class CookieTokenRefreshView(APIView):
     """
@@ -42,6 +44,7 @@ class CookieTokenRefreshView(APIView):
                 httponly=True,
                 secure=True,
                 samesite='None',
+                domain=frontend_domain,  
                 max_age=15*60,
             )
 
@@ -52,6 +55,7 @@ class CookieTokenRefreshView(APIView):
                 httponly=True,
                 secure=True,
                 samesite='None',
+                domain=frontend_domain,  
                 max_age=7*24*60*60,
             )
 
