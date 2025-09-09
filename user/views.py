@@ -644,6 +644,33 @@ class PasswordResetStatusView(APIView):
             )
 
 
+
+# Logout View
+@method_decorator(never_cache, name="dispatch")
+class LogoutView(APIView):
+    def post(self, request):
+
+        refresh_token = request.COOKIES.get('refresh')
+        if not refresh_token:
+            return Response({"error": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Blacklist the refresh token
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception as e:
+            logger.warning(f"Invalid refresh token during logout: {str(e)}")
+            return Response({"error": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            response = Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
+            response.delete_cookie('access')
+            response.delete_cookie('refresh')
+            return response
+        except Exception as e:
+            logger.exception("Error during logout.")
+            return Response({"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # sanding cute email to nusarat
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
