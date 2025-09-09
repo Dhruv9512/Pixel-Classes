@@ -21,18 +21,18 @@ class CookieTokenRefreshView(TokenRefreshView):
             return Response({"error": "Refresh token missing"}, status=401)
 
         try:
-            # Load old refresh token
-            refresh = RefreshToken(refresh_token)
+            # Extract user before blacklisting
+            user = refresh_token.user  
 
             # Generate new access token
-            new_access = str(refresh.access_token)
+            new_access = str(refresh_token.access_token)
 
-            # Create a completely new refresh token
-            new_refresh = RefreshToken.for_user(refresh.user)
+            # Blacklist the old refresh token (if enabled)
+            if getattr(refresh_token, "blacklist", None):
+                refresh_token.blacklist()
 
-            # Rotate refresh token if blacklisting enabled
-            if getattr(refresh, "blacklist", None):
-                refresh.blacklist()
+            # Now create a completely new refresh token
+            new_refresh = RefreshToken.for_user(user)
 
 
             response = Response({"message": "Tokens refreshed successfully"}, status=200)
