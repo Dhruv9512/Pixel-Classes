@@ -10,10 +10,10 @@ class CookieJWTAuthentication(JWTAuthentication):
         try:
             validated_token = self.get_validated_token(raw_token)
         except Exception as e:
-            return AuthenticationFailed(f'Token Validation Error: ' + str(e))
+            raise AuthenticationFailed(f'Token Validation Error: ' + str(e))
 
         try:
             user = self.get_user(validated_token)
             return user, validated_token
         except Exception as e:
-            return AuthenticationFailed(f'User Retrieval Error: ' + str(e))
+            raise AuthenticationFailed(f'User Retrieval Error: ' + str(e))
