@@ -16,6 +16,8 @@ class CookieTokenRefreshView(APIView):
     Refresh access and refresh tokens and set them in HttpOnly cookies.
     Frontend does NOT need to handle tokens manually.
     """
+    authentication_classes = []
+    permission_classes = []
     def post(self, request):
         try:
             # Get refresh token from cookie
