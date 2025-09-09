@@ -17,13 +17,14 @@ from .models import get_current_date, get_current_time
 from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from user.utils import user_key   # or any key function you are using
-
+from user.authentication import CookieJWTAuthentication
 # Load environment variables
 load_dotenv()
 
 # ✅ Course List View
 @method_decorator(csrf_exempt, name="dispatch")
 class CoursesView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
@@ -41,6 +42,7 @@ class CoursesView(APIView):
 # ✅ QuePdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
@@ -57,6 +59,7 @@ class QuePdfView(APIView):
 # QuePdf View Subject vise
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfSubView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -85,6 +88,7 @@ class QuePdfSubView(APIView):
 # Get all subject
 @method_decorator(csrf_exempt, name="dispatch")
 class QuePdfGetSubView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -108,6 +112,7 @@ load_dotenv()
 @method_decorator(never_cache, name="dispatch")
 class AnsPdfUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -166,6 +171,7 @@ class AnsPdfUploadView(APIView):
 # ✅ AnsPdf View (Fixed to GET)
 @method_decorator(csrf_exempt, name="dispatch")
 class AnsPdfView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -187,6 +193,7 @@ class AnsPdfView(APIView):
 @method_decorator(never_cache, name="dispatch")
 class QuePdfAddView(APIView):
     parser_classes = (MultiPartParser, FormParser)  # Ensure file handling support
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -234,6 +241,7 @@ class QuePdfAddView(APIView):
 # Delete expire cached data
 @method_decorator(csrf_exempt, name="dispatch")
 class CacheCleanupView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         from django.core.cache import cache

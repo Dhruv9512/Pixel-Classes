@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from urllib.parse import unquote, urlparse
 from home.models import AnsPdf
 from vercel_blob import delete  as del_, put
-
+from user.authentication import CookieJWTAuthentication
 from user.utils import user_key
 from .models import Follow
 from django.core.cache import cache
@@ -17,6 +17,7 @@ from django.utils.decorators import method_decorator
 
 
 class ProfileDetailsView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
@@ -56,6 +57,7 @@ class ProfileDetailsView(APIView):
 
 
 class userPostsView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
@@ -89,6 +91,7 @@ class userPostsView(APIView):
         
 @method_decorator(never_cache, name="dispatch")
 class UserPostDeleteView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def delete(self, request):
         try:
@@ -122,6 +125,7 @@ class UserPostDeleteView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class EditProfileView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def put(self, request):
         try:
@@ -196,6 +200,7 @@ class EditProfileView(APIView):
 # create a user search view
 @method_decorator(never_cache, name="dispatch")
 class UserSearchView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
@@ -209,6 +214,7 @@ class UserSearchView(APIView):
 # followe view
 @method_decorator(never_cache, name="dispatch")
 class FollowView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -240,6 +246,7 @@ class FollowView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class UnfollowView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -269,6 +276,7 @@ class UnfollowView(APIView):
         
         
 class FollowersView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
@@ -287,6 +295,7 @@ class FollowersView(APIView):
         
 
 class FollowingView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:

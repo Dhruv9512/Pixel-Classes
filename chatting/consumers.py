@@ -10,7 +10,7 @@ import hashlib
 from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken
 from user.utils import user_key
 
 # ---------------- Logging ----------------
@@ -220,9 +220,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 # ---------------- NotificationConsumer ----------------
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        query_string = self.scope["query_string"].decode()
-        query_params = parse_qs(query_string)
-        token_key = query_params.get("token", [None])[0]
+       # Extract cookies from headers
+        cookie_header = dict(self.scope["headers"]).get(b'cookie', b'').decode()
+        cookies = {c.split('=')[0]: c.split('=')[1] for c in cookie_header.split('; ') if '=' in c}
+        token_key = cookies.get("access")  # <-- name of your cookie storing JWT
+
 
         self.user = await self.get_user_from_token(token_key)
         if not self.user:
@@ -258,7 +260,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         if not token_key:
             return None
         try:
-            validated_token = RefreshToken(token_key)
+            validated_token = AccessToken(token_key)
             user_id = validated_token["user_id"]
             return User.objects.get(id=user_id)
         except Exception as e:

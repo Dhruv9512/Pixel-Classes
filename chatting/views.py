@@ -13,7 +13,7 @@ from .serializers import MessageSerializer
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 import hashlib
-import jwt
+from user.authentication import CookieJWTAuthentication
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.cache import cache
@@ -27,6 +27,7 @@ logging.basicConfig(level=logging.INFO)
 
 @method_decorator(never_cache, name='dispatch')
 class ChatMessagesView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def get(self, request, room_name):
         query = request.query_params.get('q')
@@ -69,6 +70,7 @@ class ChatMessagesView(APIView):
             return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
@@ -111,6 +113,7 @@ class EditMessageView(APIView):
 
 @method_decorator(never_cache, name="dispatch")
 class DeleteMessageView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def delete(self, request, pk):
         sender = request.user

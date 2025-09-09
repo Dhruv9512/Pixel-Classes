@@ -216,11 +216,7 @@ CORS_ALLOWED_ORIGINS = config(
     default="https://pixel-classes.onrender.com,https://pixelclass.netlify.app,http://172.20.10.4:5173,http://localhost:5173",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
-
 CORS_ALLOW_CREDENTIALS = True
-CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
-CORS_ALLOW_HEADERS = ['content-type', 'authorization', 'x-csrftoken']
-
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
     default="https://pixelclass.netlify.app,http://172.20.10.4:5173,http://localhost:5173",

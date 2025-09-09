@@ -6,7 +6,7 @@ from rest_framework import status
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from user.authentication import CookieJWTAuthentication
 
 
 
@@ -69,8 +69,8 @@ class MeApiView(APIView):
     Returns authenticated user's info.
     Requires a valid access token in HttpOnly cookie.
     """
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
 
     def get(self, request):
         # At this point, IsAuthenticated ensures request.user is valid
