@@ -7,46 +7,42 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
 from user.authentication import CookieJWTAuthentication
-from rest_framework_simplejwt.views import TokenRefreshView
+
 
 
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class CookieTokenRefreshView(TokenRefreshView):
+class CookieTokenRefreshView(APIView):
     authentication_classes = []
     permission_classes = []
 
     def post(self, request):
-        refresh_token = request.COOKIES.get("refresh")
-        if not refresh_token:
+        raw_refresh = request.COOKIES.get("refresh")
+        if not raw_refresh:
             return Response({"error": "Refresh token missing"}, status=401)
 
         try:
-            # Extract user before blacklisting
-            user = refresh_token.user  
+            refresh = RefreshToken(raw_refresh)   # Convert string to RefreshToken
+            user = refresh.user
 
-            # Generate new access token
-            new_access = str(refresh_token.access_token)
+            # Create new access
+            new_access = str(refresh.access_token)
 
-            # Blacklist the old refresh token (if enabled)
-            if getattr(refresh_token, "blacklist", None):
-                refresh_token.blacklist()
+            # Blacklist old refresh (optional, only if you enabled token_blacklist)
+            if getattr(refresh, "blacklist", None):
+                refresh.blacklist()
 
-            # Now create a completely new refresh token
+            # Issue brand new refresh
             new_refresh = RefreshToken.for_user(user)
 
-
             response = Response({"message": "Tokens refreshed successfully"}, status=200)
-
-            # Set cookies
             response.set_cookie("access", new_access, httponly=True, secure=True, samesite="None", max_age=15*60)
             response.set_cookie("refresh", str(new_refresh), httponly=True, secure=True, samesite="None", max_age=7*24*60*60)
-
             return response
 
         except Exception as e:
-            print("Refresh token error:", e)  # debug log
+            print("Refresh token error:", e)
             return Response({"error": "Invalid or expired refresh token"}, status=401)
 
 
