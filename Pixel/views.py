@@ -7,11 +7,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
 from user.authentication import CookieJWTAuthentication
-
+from rest_framework.authtoken import TokenRefreshView
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-class CookieTokenRefreshView(APIView):
+class CookieTokenRefreshView(TokenRefreshView):
     authentication_classes = []
     permission_classes = []
 
@@ -29,7 +29,7 @@ class CookieTokenRefreshView(APIView):
 
             # Create a completely new refresh token
             new_refresh = RefreshToken.for_user(refresh.user)
-            
+
             # Rotate refresh token if blacklisting enabled
             if getattr(refresh, "blacklist", None):
                 refresh.blacklist()
