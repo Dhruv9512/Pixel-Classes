@@ -7,7 +7,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import IsAuthenticated
 from user.authentication import CookieJWTAuthentication
-from rest_framework.authtoken import TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
+
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
