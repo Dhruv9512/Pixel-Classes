@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from Pixel.views import CookieTokenRefreshView,MeApiView
+from Pixel.views import CookieTokenRefreshView,MeApiView,GetWsTokenView
 
 urlpatterns = [
     path('jet/', include('jet.urls', 'jet')), 
@@ -29,4 +29,6 @@ urlpatterns = [
     path('api/chatting/', include('chatting.urls')),  
     path("api/token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("api/me/", MeApiView.as_view(), name="me"),
+    path("api/ws-token/", GetWsTokenView.as_view(), name="ws_token"),
+
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
