@@ -12,58 +12,39 @@ from user.authentication import CookieJWTAuthentication
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CookieTokenRefreshView(APIView):
-    """
-    Refresh access and refresh tokens and set them in HttpOnly cookies.
-    Frontend does NOT need to handle tokens manually.
-    """
     authentication_classes = []
     permission_classes = []
-    def post(self, request):
-        try:
-            # Get refresh token from cookie
-            refresh_token = request.COOKIES.get('refresh')
-            if not refresh_token:
-                return Response({'error': 'Refresh token missing'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Validate and rotate refresh token
+    def post(self, request):
+        refresh_token = request.COOKIES.get("refresh")
+        if not refresh_token:
+            return Response({"error": "Refresh token missing"}, status=401)
+
+        try:
+            # Load old refresh token
             refresh = RefreshToken(refresh_token)
+
+            # Generate new access token
             new_access = str(refresh.access_token)
 
-            # Rotate refresh token if enabled
-            if getattr(refresh, 'blacklist', None):
-                refresh.blacklist()  # invalidate old refresh token if blacklisting
+            # Rotate refresh token if blacklisting enabled
+            if getattr(refresh, "blacklist", None):
+                refresh.blacklist()
 
-            new_refresh = str(refresh)  # new refresh token
+            # Create a completely new refresh token
+            new_refresh = RefreshToken.for_user(refresh.user)
 
-            response = Response({
-                "message": "Tokens refreshed successfully"
-            }, status=status.HTTP_200_OK)
+            response = Response({"message": "Tokens refreshed successfully"}, status=200)
 
-            # Set access token cookie (15 min)
-            response.set_cookie(
-                key='access',
-                value=new_access,
-                httponly=True,
-                secure=True,
-                samesite='None',  
-                max_age=15*60,
-            )
-
-            # Set refresh token cookie (7 days)
-            response.set_cookie(
-                key='refresh',
-                value=new_refresh,
-                httponly=True,
-                secure=True,
-                samesite='None',  
-                max_age=7*24*60*60,
-            )
+            # Set cookies
+            response.set_cookie("access", new_access, httponly=True, secure=True, samesite="None", max_age=15*60)
+            response.set_cookie("refresh", str(new_refresh), httponly=True, secure=True, samesite="None", max_age=7*24*60*60)
 
             return response
 
         except Exception as e:
-            return Response({"error": "Invalid or expired refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
-
+            print("Refresh token error:", e)  # debug log
+            return Response({"error": "Invalid or expired refresh token"}, status=401)
 
 
 class MeApiView(APIView):
