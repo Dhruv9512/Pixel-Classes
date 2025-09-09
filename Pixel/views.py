@@ -27,12 +27,13 @@ class CookieTokenRefreshView(APIView):
             # Generate new access token
             new_access = str(refresh.access_token)
 
+            # Create a completely new refresh token
+            new_refresh = RefreshToken.for_user(refresh.user)
+            
             # Rotate refresh token if blacklisting enabled
             if getattr(refresh, "blacklist", None):
                 refresh.blacklist()
 
-            # Create a completely new refresh token
-            new_refresh = RefreshToken.for_user(refresh.user)
 
             response = Response({"message": "Tokens refreshed successfully"}, status=200)
 
