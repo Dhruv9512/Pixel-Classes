@@ -19,11 +19,12 @@ from django.utils.decorators import method_decorator
 class ProfileDetailsView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
-    def get(self, request):
+    def post(self, request):
         try:
             
             # Try to fetch the user
-            user = request.user
+            username = request.data.get('username')
+            user=User.objects.get(username=username)
 
             # Try to fetch the profile
             profile_obj = ProfileModel.objects.get(user_obj=user)
