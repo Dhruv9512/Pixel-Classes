@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
+from Profile.models import Follow
 
 # ---------------- Logging ----------------
 logger = logging.getLogger(__name__)
@@ -113,6 +114,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Broadcast to user notifications
         await self.send_user_notifications(saved_message)
+        # Broadcast inbox update to both users
+        await self.broadcast_inbox_update(self.user.id)
+        await self.broadcast_inbox_update(self.receiver.id)
 
     async def handle_seen_event(self, data):
         message_id = data.get("message_id")
@@ -201,6 +205,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     "total_unseen_count": total_unseen,
                 },
             )
+    
+    # Update MessageInboxConsumer
+    # ---------------- Utility: Broadcast inbox update ----------------
+    async def broadcast_inbox_update(self, user_id):
+        """
+        Broadcasts an inbox update event to the user's message inbox group.
+        """
+        await self.channel_layer.group_send(
+            f"message_inbox_{user_id}",
+            {
+                "type": "inbox_update"  # This will call inbox_update in MessageInboxConsumer
+            }
+        )
+
+
 
     @database_sync_to_async
     def get_total_unseen_count(self, user_id):
@@ -292,3 +311,107 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
         return len(groups)  
 
+
+
+
+
+
+class MessageInboxConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # ---------------- 1. Get token ----------------
+        query_string = self.scope.get("query_string", b"").decode()
+        query_params = parse_qs(query_string)
+        token_key = query_params.get("token", [None])[0]
+
+        self.user = await self.get_user_from_token(token_key)
+        if not self.user:
+            logger.warning("[MESSAGE INBOX CONNECT] Invalid token, closing connection")
+            await self.close()
+            return
+
+        # ---------------- 2. Add to user-specific channel ----------------
+        self.group_name = f"message_inbox_{self.user.id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+        # ---------------- 3. Fetch inbox ----------------
+        inbox_data = await self.get_user_inbox(self.user.id)
+
+        # ---------------- 4. Send inbox to frontend ----------------
+        await self.send(text_data=json.dumps({
+            "type": "inbox_data",
+            "inbox": inbox_data
+        }))
+
+        logger.info(f"[MESSAGE INBOX CONNECT] Sent inbox to user {self.user.username}")
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        logger.info(f"[MESSAGE INBOX DISCONNECT] User {self.user.username} disconnected, code: {close_code}")
+
+
+    
+    # ---------------- Handle inbox updates ----------------
+    async def inbox_update(self, event):
+        inbox_data = await self.get_user_inbox(self.user.id)
+        await self.send(text_data=json.dumps({
+            "type": "inbox_data",
+            "inbox": inbox_data
+        }))
+
+
+    # ---------------- DB Operations ----------------
+    @database_sync_to_async
+    def get_user_from_token(self, token_key):
+        if not token_key:
+            return None
+        try:
+            validated_token = AccessToken(token_key)
+            user_id = validated_token["user_id"]
+            return User.objects.get(id=user_id)
+        except Exception as e:
+            logger.error(f"[TOKEN ERROR] Invalid token: {e}", exc_info=True)
+            return None
+
+    
+
+    @database_sync_to_async
+    def get_user_inbox(self, user_id):
+        """
+        Returns a list of unique users (followers + following)
+        with their latest message with the authenticated user.
+        """
+        try:
+            user = User.objects.get(id=user_id)
+            follow_obj = Follow.objects.filter(user=user).first()
+
+            following_ids = set(follow_obj.following.values_list('id', flat=True)) if follow_obj else set()
+            follower_ids = set(user.followers.values_list('id', flat=True))  # Reverse relation from Follow model
+
+            # Merge & remove duplicates
+            unique_user_ids = list(following_ids.union(follower_ids))
+
+            inbox = []
+            for other_user_id in unique_user_ids:
+                other_user = User.objects.get(id=other_user_id)
+                # Get latest message between user and other_user
+                latest_msg = Message.objects.filter(
+                    sender_id__in=[user_id, other_user_id],
+                    receiver_id__in=[user_id, other_user_id]
+                ).order_by('-timestamp').first()
+
+                inbox.append({
+                    "user_id": other_user.id,
+                    "username": other_user.username,
+                    "latest_message": latest_msg.content if latest_msg else None,
+                    "timestamp": str(latest_msg.timestamp) if latest_msg else None,
+                    "is_seen": latest_msg.is_seen if latest_msg else None
+                })
+
+            # Sort by latest message timestamp (descending)
+            inbox.sort(key=lambda x: x['timestamp'] or '', reverse=True)
+            return inbox
+
+        except Exception as e:
+            logger.error(f"[INBOX ERROR] {e}", exc_info=True)
+            return []

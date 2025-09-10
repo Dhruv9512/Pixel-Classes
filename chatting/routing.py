@@ -6,4 +6,6 @@ websocket_urlpatterns = [
     re_path(r'ws/notifications/$', consumers.NotificationConsumer.as_asgi()),
     # Existing chat room consumer
     re_path(r"ws/chat/$", consumers.ChatConsumer.as_asgi()),
+    # Existing message inbox consumer
+     re_path(r'ws/message-inbox/$', consumers.MessageInboxConsumer.as_asgi()),
 ]
