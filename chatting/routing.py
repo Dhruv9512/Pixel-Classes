@@ -7,5 +7,5 @@ websocket_urlpatterns = [
     # Existing chat room consumer
     re_path(r"ws/chat/$", consumers.ChatConsumer.as_asgi()),
     # Existing message inbox consumer
-     re_path(r'ws/message-inbox/$', consumers.MessageInboxConsumer.as_asgi()),
+    re_path(r'ws/message-inbox/$', consumers.MessageInboxConsumer.as_asgi()),
 ]
