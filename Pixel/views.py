@@ -9,11 +9,12 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from user.authentication import CookieJWTAuthentication
 from django.contrib.auth import get_user_model
 from datetime import timedelta
+from django.views.decorators.cache import never_cache 
 # Set up logger
 logger = logging.getLogger(__name__)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(never_cache, name="dispatch")
 class CookieTokenRefreshView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -59,6 +60,7 @@ class CookieTokenRefreshView(APIView):
             return Response({"error": "Invalid or expired refresh token"}, status=401)
 
 
+@method_decorator(never_cache, name="dispatch")
 class MeApiView(APIView):
     """
     Returns authenticated user's info.
@@ -77,6 +79,7 @@ class MeApiView(APIView):
 
 
 
+@method_decorator(never_cache, name="dispatch")
 class GetWsTokenView(APIView):
     """
     Returns a short-lived WebSocket token for the authenticated user.
