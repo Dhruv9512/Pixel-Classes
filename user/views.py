@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.contrib.auth.tokens import default_token_generator
-from .utils import generate_otp, send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token
+from .utils import generate_otp, send_mail_for_register, send_mail_for_login, send_password_reset_email,generate_reset_token,user_key
 from datetime import timedelta
 from django.utils import timezone
 from django.core.cache import cache  
@@ -403,7 +403,7 @@ class RegisterView(APIView):
                 logger.warning(f"Registration failed: Email {email} already exists.")
                 return Response({"error": "Email address is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
-            if User.objects.filter(username__iexact=username).exclude(id=user.id).exists():
+            if User.objects.filter(username__iexact=username).exists():
                     return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
             # Validate and save user
@@ -665,6 +665,7 @@ class LogoutView(APIView):
             response = Response({"message": "Logged out successfully."}, status=status.HTTP_200_OK)
             response.delete_cookie('access')
             response.delete_cookie('refresh')
+            cache.delete(user_key(user=request.user))
             return response
         except Exception as e:
             logger.exception("Error during logout.")
