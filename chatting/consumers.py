@@ -221,10 +221,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 class NotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
        # Extract cookies from headers
-        cookie_header = dict(self.scope["headers"]).get(b'cookie', b'').decode()
-        cookies = {c.split('=')[0]: c.split('=')[1] for c in cookie_header.split('; ') if '=' in c}
-        token_key = cookies.get("access")  # <-- name of your cookie storing JWT
-
+       
+        query_string = self.scope.get("query_string", b"").decode()
+        query_params = parse_qs(query_string)
+        
+        # Get token from ?token=... in ws url
+        token_key = query_params.get("token", [None])[0]
 
         self.user = await self.get_user_from_token(token_key)
         if not self.user:
