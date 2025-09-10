@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth.models import User
 from channels.db import database_sync_to_async
+from django.dispatch import receiver
 from django.utils import timezone
 from .models import Message
 from rest_framework_simplejwt.tokens import AccessToken
@@ -177,6 +178,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not cache.get(cache_key):
             send_unseen_message_email_task.apply_async(args=(sender.id, receiver.id), countdown=3600)
             cache.set(cache_key, True, timeout=4500)
+
+        cache.delete(f"chat_messages:{sender.username}__{receiver.username}")
+        cache.delete(f"chat_messages:{receiver.username}__{sender.username}")
 
         return msg
 

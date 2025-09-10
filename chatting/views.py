@@ -25,49 +25,48 @@ logging.basicConfig(level=logging.INFO)
 
 # per room cach
 
-@method_decorator(never_cache, name='dispatch')
+@method_decorator(never_cache, name="dispatch")
 class ChatMessagesView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
+
     def get(self, request, room_name):
-        query = request.query_params.get('q')
-        logger.info(f"Fetching messages for room: {room_name} with query: {query}")
+        query = request.query_params.get("q")
+        sender = request.user   # ✅ sender from JWT
+        logger.info(f"[ChatMessagesView] sender={sender.username}, room_name={room_name}, query={query}")
 
         try:
-            username1_enc, username2_enc = room_name.split('__')
-            username1 = unquote(username1_enc)
-            username2 = unquote(username2_enc)
+            # Receiver from URL (room_name = receiver username)
+            receiver = User.objects.get(username=room_name)
+            logger.info(f"[ChatMessagesView] Receiver resolved: {receiver.username}")
 
-            user1 = User.objects.get(username=username1)
-            user2 = User.objects.get(username=username2)
-            logger.info(f"Users found: {user1.username}, {user2.username}")
+            # Cache key
+            cache_key = f"chat_messages:{sender.username}__{receiver.username}:{query or ''}"
+            cached = cache.get(cache_key)
+            if cached:
+                logger.debug(f"[ChatMessagesView] Cache hit for {cache_key}")
+                return Response(cached)
 
-            # Room-based cache key
-            cache_key = f"chat_messages:{user1.username}__{user2.username}:{query or ''}"
-            messages_data = cache.get(cache_key)
-            if messages_data:
-                return Response(messages_data)
-
+            # Query DB for messages between sender & receiver
             messages = Message.objects.filter(
-                Q(sender=user1, receiver=user2) | Q(sender=user2, receiver=user1)
+                Q(sender=sender, receiver=receiver) | Q(sender=receiver, receiver=sender)
             )
-
             if query:
                 messages = messages.filter(content__icontains=query)
 
-            messages = messages.order_by('timestamp')
+            messages = messages.order_by("timestamp")
             serializer = MessageSerializer(messages, many=True)
 
-            # Store in cache for 5 minutes
+            # Cache for 5 min
             cache.set(cache_key, serializer.data, timeout=300)
+            logger.debug(f"[ChatMessagesView] Cache set for {cache_key}")
+
             return Response(serializer.data)
 
         except User.DoesNotExist:
-            logger.error("One or both users not found")
-            return Response({"error": "One or both users not found"}, status=404)
-        except ValueError:
-            logger.error("Invalid room name format")
-            return Response({"error": "Invalid room name format. Use 'user1__user2'"}, status=400)
+            logger.error("[ChatMessagesView] Receiver not found")
+            return Response({"error": "Receiver not found"}, status=404)
+
 @method_decorator(never_cache, name="dispatch")
 class EditMessageView(APIView):
     authentication_classes = [CookieJWTAuthentication]
