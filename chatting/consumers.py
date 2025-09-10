@@ -394,6 +394,11 @@ class MessageInboxConsumer(AsyncWebsocketConsumer):
             inbox = []
             for other_user_id in unique_user_ids:
                 other_user = User.objects.get(id=other_user_id)
+                
+                # Get profile pic
+                profile_obj = getattr(other_user, "profile", None)  # profile is related name if not set, default is 'profile_set'
+                profile_pic = profile_obj.profile_pic if profile_obj else "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp"
+
                 # Get latest message between user and other_user
                 latest_msg = Message.objects.filter(
                     sender_id__in=[user_id, other_user_id],
@@ -403,10 +408,12 @@ class MessageInboxConsumer(AsyncWebsocketConsumer):
                 inbox.append({
                     "user_id": other_user.id,
                     "username": other_user.username,
+                    "profile_pic": profile_pic,  # Add profile pic here
                     "latest_message": latest_msg.content if latest_msg else None,
                     "timestamp": str(latest_msg.timestamp) if latest_msg else None,
                     "is_seen": latest_msg.is_seen if latest_msg else None
                 })
+
 
             # Sort by latest message timestamp (descending)
             inbox.sort(key=lambda x: x['timestamp'] or '', reverse=True)
