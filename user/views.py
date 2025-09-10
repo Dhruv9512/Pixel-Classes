@@ -466,7 +466,11 @@ class ResendOTPView(APIView):
         try:
             # Send OTP email asynchronously
             try:
-                user_data = RegisterSerializer(user).data
+                user_data = RegisterSerializer(user).data       
+                # regenerate if needed
+                otp = generate_otp()
+                cache.set(f"otp_{user.pk}", otp, timeout=300) 
+                user_data["otp"] = otp
                 send_mail_for_register.apply_async(args=[user_data])
                 logger.info(f"Resent OTP email to {user.email}")
             except Exception as e:
