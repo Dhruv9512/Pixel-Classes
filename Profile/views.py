@@ -24,10 +24,10 @@ class ProfileDetailsView(APIView):
             
             # Try to fetch the user
             if request.user:
-                user = request.user
-            else:
                 username = request.data.get('username')
-                user = User.objects.get(username=username)
+                user = User.objects.get(username=username)      
+            else:
+                user = request.user
 
             # Try to fetch the profile
             profile_obj = ProfileModel.objects.get(user_obj=user)
@@ -67,11 +67,12 @@ class userPostsView(APIView):
         try:
 
             if request.user:
-                user = request.user
-                username = user.username
-            else:
                 username = request.data.get('username')
                 user = User.objects.get(username=username)
+            else:
+                user = request.user
+                username = user.username
+
             # Fetch posts related to the user
             posts = AnsPdf.objects.filter(name=username)
             serializer = UserPostsSerializer(posts, many=True)
