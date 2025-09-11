@@ -23,8 +23,11 @@ class ProfileDetailsView(APIView):
         try:
             
             # Try to fetch the user
-            username = request.data.get('username')
-            user=User.objects.get(username=username)
+            if request.user:
+                user = request.user
+            else:
+                username = request.data.get('username')
+                user = User.objects.get(username=username)
 
             # Try to fetch the profile
             profile_obj = ProfileModel.objects.get(user_obj=user)
@@ -60,10 +63,15 @@ class ProfileDetailsView(APIView):
 class userPostsView(APIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAuthenticated]
-    def get(self, request):
+    def post(self, request):
         try:
-            user = request.user
-            username = user.username
+
+            if request.user:
+                user = request.user
+                username = user.username
+            else:
+                username = request.data.get('username')
+                user = User.objects.get(username=username)
             # Fetch posts related to the user
             posts = AnsPdf.objects.filter(name=username)
             serializer = UserPostsSerializer(posts, many=True)
@@ -83,12 +91,12 @@ class userPostsView(APIView):
             return Response({
                 "posts": all_posts,
             }, status=status.HTTP_200_OK)
-        
-
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
         
 @method_decorator(never_cache, name="dispatch")
 class UserPostDeleteView(APIView):
