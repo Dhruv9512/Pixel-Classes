@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from .tasks import send_unseen_message_email_task
 import pytz
 from django.core.cache import cache
-from Profile.models import Follow
+from Profile.models import Follow,profile
 
 # ---------------- Logging ----------------
 logger = logging.getLogger(__name__)
@@ -421,7 +421,7 @@ class MessageInboxConsumer(AsyncWebsocketConsumer):
             inbox = []
             for other_user_id in unique_user_ids:
                 other_user = User.objects.get(id=other_user_id)
-                profile_obj = getattr(other_user, "profile", None)
+                profile_obj = profile.objects.filter(user_obj=other_user).first()
                 profile_pic = (
                     profile_obj.profile_pic
                     if profile_obj

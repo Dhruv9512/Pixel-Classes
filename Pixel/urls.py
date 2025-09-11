@@ -30,5 +30,6 @@ urlpatterns = [
     path("api/token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("api/me/", MeApiView.as_view(), name="me"),
     path("api/ws-token/", GetWsTokenView.as_view(), name="ws_token"),
+    path("api/core/", include("core.urls")),
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

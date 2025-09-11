@@ -81,7 +81,7 @@ INSTALLED_APPS = [
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),      # short-lived access token
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),      # short-lived access token
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),         # long-lived refresh token
     'ROTATE_REFRESH_TOKENS': True,                       # issue new refresh token on refresh
     'BLACKLIST_AFTER_ROTATION': True,                    # invalidate old refresh tokens
@@ -188,9 +188,13 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': '1000/day',
-        'anon': '100/day',
+        'user': '100000/day',
+        'anon': '10000/day',
     },
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',  # counts per user
+        'rest_framework.throttling.AnonRateThrottle',  # counts per IP for anon users
+    ]
 }
 
 
