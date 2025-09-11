@@ -96,6 +96,9 @@ class EditMessageView(APIView):
 
         message.content = new_content
         message.save()
+        cache.delete(f"chat_messages:{message.sender.username}__{message.receiver.username}")
+        cache.delete(f"chat_messages:{message.receiver.username}__{message.sender.username}")
+
         logger.info(f"Message {message.id} updated")
 
         channel_layer = get_channel_layer()
@@ -135,6 +138,9 @@ class DeleteMessageView(APIView):
         group_name = f"chat_{hashlib.sha256(room_name.encode()).hexdigest()}"
 
         message.delete()
+        cache.delete(f"chat_messages:{message.sender.username}__{message.receiver.username}")
+        cache.delete(f"chat_messages:{message.receiver.username}__{message.sender.username}")
+
         logger.info(f"Message {pk} deleted")
 
         channel_layer = get_channel_layer()

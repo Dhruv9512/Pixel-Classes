@@ -162,6 +162,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
         )
 
+    async def edit_message(self, event):
+        await self.send(
+            text_data=json.dumps({
+                "type": "edit",
+                "id": event["id"],
+                "new_content": event["new_content"],
+            })
+        )
+
+    async def delete_message(self, event):
+        await self.send(
+            text_data=json.dumps({
+                "type": "delete",
+                "id": event["id"],
+            })
+        )
+
+
     # ---------------- DB operations ----------------
     @database_sync_to_async
     def save_message(self, sender_username, receiver_username, message):
@@ -381,48 +399,55 @@ class MessageInboxConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_inbox(self, user_id):
-        """
-        Returns a list of unique users (followers + following)
-        with their latest message with the authenticated user.
-        """
         try:
             user = User.objects.get(id=user_id)
             follow_obj = Follow.objects.filter(user=user).first()
 
-            following_ids = set(follow_obj.following.values_list('id', flat=True)) if follow_obj else set()
-            follower_ids = set(user.followers.values_list('id', flat=True))  # Reverse relation from Follow model
+            following_ids = set()
+            follower_ids = set()
 
-            # Merge & remove duplicates
+            if follow_obj:
+                # ✅ Users this user is following
+                following_ids = set(follow_obj.following.values_list("user__id", flat=True))
+
+                # ✅ Users who follow this user
+                follower_ids = set(
+                    Follow.objects.filter(following=follow_obj).values_list("user__id", flat=True)
+                )
+
+            # Merge
             unique_user_ids = list(following_ids.union(follower_ids))
 
             inbox = []
             for other_user_id in unique_user_ids:
                 other_user = User.objects.get(id=other_user_id)
-                
-                # Get profile pic
-                profile_obj = getattr(other_user, "profile", None)  # profile is related name if not set, default is 'profile_set'
-                profile_pic = profile_obj.profile_pic if profile_obj else "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp"
+                profile_obj = getattr(other_user, "profile", None)
+                profile_pic = (
+                    profile_obj.profile_pic
+                    if profile_obj
+                    else "https://mphkxojdifbgafp1.public.blob.vercel-storage.com/Profile/p.webp"
+                )
 
-                # Get latest message between user and other_user
                 latest_msg = Message.objects.filter(
                     sender_id__in=[user_id, other_user_id],
-                    receiver_id__in=[user_id, other_user_id]
-                ).order_by('-timestamp').first()
+                    receiver_id__in=[user_id, other_user_id],
+                ).order_by("-timestamp").first()
 
-                inbox.append({
-                    "user_id": other_user.id,
-                    "username": other_user.username,
-                    "profile_pic": profile_pic,  # Add profile pic here
-                    "latest_message": latest_msg.content if latest_msg else None,
-                    "timestamp": str(latest_msg.timestamp) if latest_msg else None,
-                    "is_seen": latest_msg.is_seen if latest_msg else None
-                })
+                inbox.append(
+                    {
+                        "user_id": other_user.id,
+                        "username": other_user.username,
+                        "profile_pic": profile_pic,
+                        "latest_message": latest_msg.content if latest_msg else None,
+                        "timestamp": str(latest_msg.timestamp) if latest_msg else None,
+                        "is_seen": latest_msg.is_seen if latest_msg else None,
+                    }
+                )
 
-
-            # Sort by latest message timestamp (descending)
-            inbox.sort(key=lambda x: x['timestamp'] or '', reverse=True)
+            inbox.sort(key=lambda x: x["timestamp"] or "", reverse=True)
             return inbox
 
         except Exception as e:
             logger.error(f"[INBOX ERROR] {e}", exc_info=True)
             return []
+
