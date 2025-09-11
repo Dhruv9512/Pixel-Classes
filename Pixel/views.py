@@ -95,9 +95,16 @@ class GetWsTokenView(APIView):
                 logger.warning("Unauthorized attempt to get WebSocket token")
                 return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-            # Issue short-lived access token
-            ws_token = RefreshToken.for_user(user).access_token
-            ws_token.set_exp(lifetime=timedelta(minutes=2))
+            # Create refresh token for user
+            refresh = RefreshToken.for_user(user)
+            refresh.set_exp(lifetime=timedelta(minutes=2))  # 2-min expiry for refresh
+
+            # Create access token
+            access = refresh.access_token
+            access.set_exp(lifetime=timedelta(minutes=2))   # 2-min expiry for access
+
+            # Use tokens
+            ws_token = str(access)
 
             logger.info(f"WebSocket token issued for user: {user.username}")
             return Response({"ws_token": str(ws_token)}, status=status.HTTP_200_OK)
