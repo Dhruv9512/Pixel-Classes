@@ -49,7 +49,7 @@ class CookieTokenRefreshView(APIView):
 
             response = Response({"message": "Tokens refreshed successfully"}, status=200)
             response.set_cookie("access", new_access, httponly=True, secure=True,
-                                samesite="None", max_age=15*60)
+                                samesite="None", max_age=30*60)
             response.set_cookie("refresh", str(new_refresh), httponly=True, secure=True,
                                 samesite="None", max_age=7*24*60*60)
 

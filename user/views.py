@@ -29,7 +29,8 @@ import os
 from google.auth.transport.requests import Request
 from vercel_blob import put 
 from django.views.decorators.cache import never_cache 
-
+from rest_framework.permissions import IsAuthenticated
+from .authentication import CookieJWTAuthentication
 # Define COOKIE_SECURE or import from settings
 from django.conf import settings
 
@@ -104,7 +105,7 @@ class VerifyOTPView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                max_age=15*60  # 15 minutes
+                max_age=30*60  # 30 minutes
             )
             response.set_cookie(
                 key="refresh",
@@ -180,7 +181,7 @@ class GoogleLoginAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                max_age=15*60  # 15 minutes
+                max_age=30*60  # 30 minutes
             )
             response.set_cookie(
                 key="refresh",
@@ -273,7 +274,7 @@ class GoogleSignupAPIView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                max_age=15*60  # 15 minutes
+                max_age=30*60  # 30 minutes
             )
             response.set_cookie(
                 key="refresh",
@@ -353,7 +354,7 @@ class LoginView(APIView):
                 httponly=True,
                 secure=True,
                 samesite="None",
-                max_age=15*60  # 15 minutes
+                max_age=30*60  # 30 minutes
             )
             response.set_cookie(
                 key="refresh",
@@ -652,6 +653,8 @@ class PasswordResetStatusView(APIView):
 # Logout View
 @method_decorator(never_cache, name="dispatch")
 class LogoutView(APIView):
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
 
         refresh_token = request.COOKIES.get('refresh')
