@@ -23,8 +23,8 @@ class ProfileDetailsView(APIView):
         try:
             
             # Try to fetch the user
-            if request.user:
-                username = request.data.get('username')
+            username = request.data.get('username')
+            if username:
                 user = User.objects.get(username=username)      
             else:
                 user = request.user
@@ -66,9 +66,9 @@ class userPostsView(APIView):
     def post(self, request):
         try:
 
-            if request.user:
-                username = request.data.get('username')
-                user = User.objects.get(username=username)
+            username = request.data.get('username')
+            if username:
+                user = User.objects.get(username=username)      
             else:
                 user = request.user
                 username = user.username
@@ -290,7 +290,13 @@ class FollowersView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            user=request.user
+            username = request.data.get('username')
+            if username:
+                user = User.objects.get(username=username)      
+            else:
+                user = request.user
+                username = user.username
+
             follow_obj = Follow.objects.get(user=user)
             followers = follow_obj.followers.all()
             followers_users = [f.user for f in followers]
@@ -309,7 +315,13 @@ class FollowingView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            user = request.user
+            username = request.data.get('username')
+            if username:
+                user = User.objects.get(username=username)      
+            else:
+                user = request.user
+                username = user.username
+
             follow_obj = Follow.objects.get(user=user)
             following = follow_obj.following.all()
             following_users = [f.user for f in following]
