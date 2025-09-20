@@ -167,6 +167,7 @@ class EditProfileView(APIView):
                     return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
                 # Bulk update related posts (same behavior, faster) [web:27]
                 AnsPdf.objects.filter(name=username).update(name=new_username)
+                QuePdf.objects.filter(username=username).update(username=new_username)
                 user.username = new_username
                 changed = True
 
