@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import profile
-from rest_framework import serializers
 from Profile.models import profile as ProfileModel
 from urllib.parse import unquote
 from home.models import AnsPdf
@@ -8,14 +7,14 @@ from django.contrib.auth.models import User
 
 # Serializer for the profile model
 class profileSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = profile
-        fields = ['id' , 'user_obj' , 'profile_pic']
-    
-    def create(self, validated_data):
-        return profile.objects.create(**validated_data) 
+        fields = ['id', 'user_obj', 'profile_pic']
+        read_only_fields = ['id']
 
+    def create(self, validated_data):
+        # Direct create (no extra logic)
+        return profile.objects.create(**validated_data)
 
 # Combined serializer for user and profile details
 class CombinedProfileSerializer(serializers.ModelSerializer):
@@ -32,34 +31,26 @@ class CombinedProfileSerializer(serializers.ModelSerializer):
         pic = obj.profile_pic
         if not pic:
             return None
-        # If already a URL or path string
+        # If it's already a string path or URL
         if isinstance(pic, str):
-            if pic.startswith('http') or pic.startswith('https'):
-                return unquote(pic)
-            return pic
-        # If it's a FileField/ImageField
-        try:
-            if pic.name.startswith('http') or pic.name.startswith('https'):
-                return unquote(pic.name)
-            return pic.url
-        except Exception:
-            return None
+            return unquote(pic) if pic.startswith(('http', 'https')) else pic
+        # If it's a FileField/ImageField-like object
+        name = getattr(pic, 'name', '')
+        if name.startswith(('http', 'https')):
+            return unquote(name)
+        url = getattr(pic, 'url', None)
+        return url or None
 
-
-# Serializer for user posts (if needed in the future)
+# Serializer for user posts
 class UserPostsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = AnsPdf 
+        model = AnsPdf
         fields = ['id', 'que_pdf', 'name', 'contant', 'pdf']
-
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = profile
         fields = ['profile_pic']
-
-
-
 
 class UserSearchSerializer(serializers.ModelSerializer):
     profile_pic = serializers.SerializerMethodField()
@@ -70,9 +61,19 @@ class UserSearchSerializer(serializers.ModelSerializer):
         fields = ['username', 'first_name', 'last_name', 'joined_date', 'profile_pic']
 
     def get_profile_pic(self, obj):
+        """
+        Avoid per-row queries by accepting a pre-fetched map in context.
+        View should pass context['profiles_by_user_id'] = {user_id: profile_obj}
+        to prevent N+1. Falls back to a single query if not provided. Behavior unchanged. [web:75][web:80]
+        """
+        profiles_map = self.context.get('profiles_by_user_id')
+        if profiles_map is not None:
+            prof = profiles_map.get(obj.id)
+            return getattr(prof, 'profile_pic', None) if prof else None
+
+        # Fallback: original behavior (single get per user)
         try:
-            profile = ProfileModel.objects.get(user_obj=obj)
-            return profile.profile_pic if profile.profile_pic else None
+            prof = ProfileModel.objects.select_related('user_obj').only('profile_pic', 'user_obj').get(user_obj=obj)
+            return prof.profile_pic if prof.profile_pic else None
         except ProfileModel.DoesNotExist:
             return None
-

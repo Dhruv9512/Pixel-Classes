@@ -1,9 +1,6 @@
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.contrib.auth.models import User
 from django.views.decorators.cache import never_cache
-from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -15,22 +12,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-
-
 @method_decorator(never_cache, name="dispatch")
 class ExpiredCleanupView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
-    def get(self, request):
 
+    def get(self, request):
         details = {}
 
-        # Purge only expired cache rows for DatabaseCache
+        # Purge only expired cache rows for DatabaseCache (safe direct SQL) [web:192]
         try:
             conf = settings.CACHES.get("default", {})
             if conf.get("BACKEND") == "django.core.cache.backends.db.DatabaseCache":
                 table = conf["LOCATION"]
+                # Defensive quoting avoided as LOCATION is expected to be a table name config
                 with connections["default"].cursor() as cursor, transaction.atomic():
                     cursor.execute(f"DELETE FROM {table} WHERE expires < %s", [now()])
                     details["cache_deleted"] = cursor.rowcount
@@ -40,7 +35,7 @@ class ExpiredCleanupView(APIView):
             logger.error("Cache purge failed: %s", e, exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Flush expired SimpleJWT tokens
+        # Flush expired SimpleJWT tokens via management command (recommended) [web:200]
         try:
             call_command("flushexpiredtokens")
             details["jwt_status"] = "flushexpiredtokens executed"
@@ -49,5 +44,3 @@ class ExpiredCleanupView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"detail": details}, status=status.HTTP_200_OK)
-
-        
