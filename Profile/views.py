@@ -81,7 +81,7 @@ class userPostsView(APIView):
             serializer = UserPostsSerializer(posts, many=True)
 
             # Also include notes/other PDFs from QuePdf
-            notes = QuePdf.objects.filter(name=username)
+            notes = QuePdf.objects.filter(username=username)
             qserializer_notes = QuePdfSerializer(notes, many=True)
 
             all_posts = []
@@ -163,7 +163,7 @@ class EditProfileView(APIView):
                 changed = True
 
             if new_username and new_username != username:
-                if User.objects.filter(username__iexact=new_username).exclude(id=user.id).only('id').exists():
+                if User.objects.filter(username=new_username).exclude(id=user.id).only('id').exists():
                     return Response({"error": "Username already exists"}, status=status.HTTP_400_BAD_REQUEST)
                 # Bulk update related posts (same behavior, faster) [web:27]
                 AnsPdf.objects.filter(name=username).update(name=new_username)

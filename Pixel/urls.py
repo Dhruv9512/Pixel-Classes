@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from Pixel.views import CookieTokenRefreshView,MeApiView,GetWsTokenView
 
+
 urlpatterns = [
     path('jet/', include('jet.urls', 'jet')), 
     path('admin/', admin.site.urls),
@@ -31,5 +32,4 @@ urlpatterns = [
     path("api/me/", MeApiView.as_view(), name="me"),
     path("api/ws-token/", GetWsTokenView.as_view(), name="ws_token"),
     path("api/core/", include("core.urls")),
-
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
