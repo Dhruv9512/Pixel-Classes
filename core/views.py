@@ -6,40 +6,48 @@ from django.views.decorators.cache import never_cache
 from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from rest_framework import status
-from user.authentication import CookieJWTAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connections, transaction
 from django.utils.timezone import now
-# Create your views here.
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 
 
 @method_decorator(never_cache, name="dispatch")
 class ExpiredCleanupView(APIView):
-    authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = [AllowAny]
     def get(self, request):
 
+        details = {}
+
+        # Purge only expired cache rows for DatabaseCache
         try:
-            from django.core.cache import cache
-            cache.clear_expired()
+            conf = settings.CACHES.get("default", {})
+            if conf.get("BACKEND") == "django.core.cache.backends.db.DatabaseCache":
+                table = conf["LOCATION"]
+                with connections["default"].cursor() as cursor, transaction.atomic():
+                    cursor.execute(f"DELETE FROM {table} WHERE expires < %s", [now()])
+                    details["cache_deleted"] = cursor.rowcount
+            else:
+                details["cache_status"] = "Non-DB cache; backend TTL handles expiry"
         except Exception as e:
+            logger.error("Cache purge failed: %s", e, exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        # Flush expired SimpleJWT tokens
         try:
-             # ---------- 1. Cleanup expired outstanding tokens ----------
-            expired_tokens = OutstandingToken.objects.filter(expires_at__lt=now())
-            count_outstanding = expired_tokens.count()
-            expired_tokens.delete()
-
-            # ---------- 2. Cleanup expired blacklisted tokens ----------
-            expired_blacklisted = BlacklistedToken.objects.filter(token__expires_at__lt=now())
-            count_blacklisted = expired_blacklisted.count()
-            expired_blacklisted.delete()
-            return Response(
-                {"detail": f"Deleted {count_outstanding} expired outstanding tokens and {count_blacklisted} expired blacklisted tokens and expired cache."},
-                status=200
-            )
+            call_command("flushexpiredtokens")
+            details["jwt_status"] = "flushexpiredtokens executed"
         except Exception as e:
+            logger.error("flushexpiredtokens failed: %s", e, exc_info=True)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"detail": details}, status=status.HTTP_200_OK)
 
         
