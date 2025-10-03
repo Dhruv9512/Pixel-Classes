@@ -1,8 +1,9 @@
+# your_app/signals.py (or wherever this code lives)
+
 import json
 import urllib.parse
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.core.mail import EmailMessage, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -10,7 +11,11 @@ from celery import shared_task
 from .models import QuePdf
 from Profile.models import profile
 
-# Helper: map choose to a user-friendly heading (same logic, faster than repeated if/elif)
+# Import Brevo SDK
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+
+# Helper function (no changes needed)
 def _heading_for_choose(choose):
     if choose == "exam_paper":
         return "Exam Paper"
@@ -18,25 +23,26 @@ def _heading_for_choose(choose):
         return "Important Notes"
     return choose
 
-# Celery task: auto-retry with exponential backoff and jitter; reuse one SMTP connection
+# ==============================================================================
+# UPDATED CELERY TASK
+# This is the only function that needs to be modified.
+# ==============================================================================
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True, retry_kwargs={'max_retries': 5})
 def send_email_task(self, instance_data):
-    """Celery task to send an email notification asynchronously."""
+    """Celery task to send email notifications using the Brevo API."""
     try:
         if not isinstance(instance_data, dict):
             print(f"[ERROR] Received unexpected data format: {type(instance_data)}")
             return
 
         qid = instance_data.get('id')
-        print(f"[INFO] Processing email task for QuePdf ID: {qid}")
+        print(f"[INFO] Processing Brevo email task for QuePdf ID: {qid}")
 
-        # Fetch only fields needed; fail fast if missing [web:27]
         instance = QuePdf.objects.only('id', 'course', 'choose', 'sem', 'sub').filter(id=qid).first()
         if not instance:
             print(f"[ERROR] QuePdf instance with ID {qid} not found.")
             return
 
-        # Batch fetch matching users with minimal columns and join to user for email [web:27]
         matching_users = (
             profile.objects
             .select_related('user_obj')
@@ -49,57 +55,67 @@ def send_email_task(self, instance_data):
 
         heading = _heading_for_choose(instance.choose)
         pdf_link = instance_data.get("pdf_link", "")
+        subject = f"📝 New {heading} PDF Available!"
 
-        # One SMTP connection for all emails in this batch (same behavior, less overhead) [web:48]
-        with get_connection() as connection:
-            for prof in matching_users:
-                user_obj = prof.user_obj
-                user_email = getattr(user_obj, "email", None)
-                if not user_email:
-                    print(f"[WARNING] Skipping user {getattr(user_obj, 'username', 'unknown')} due to missing email.")
-                    continue
+        # Configure the Brevo API client ONCE for this task run
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = settings.BREVO_API_KEY
+        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+        sender = {"email": settings.DEFAULT_FROM_EMAIL, "name": "PixelClasses"} # Customize sender name
 
-                try:
-                    context = {
-                        'instance': instance_data,
-                        'user': {'username': getattr(user_obj, "username", "User")},
-                        'pdf_link': pdf_link,
-                        'heading': heading,
-                    }
+        # Loop through each user and send an email
+        for prof in matching_users:
+            user_obj = prof.user_obj
+            user_email = getattr(user_obj, "email", None)
+            if not user_email:
+                print(f"[WARNING] Skipping user {getattr(user_obj, 'username', 'unknown')} due to missing email.")
+                continue
 
-                    html_message = render_to_string('que_pdf_notification/que_pdf_notification.html', context)
-                    plain_message = strip_tags(html_message)
+            try:
+                context = {
+                    'instance': instance_data,
+                    'user': {'username': getattr(user_obj, "username", "User")},
+                    'pdf_link': pdf_link,
+                    'heading': heading,
+                }
+                html_message = render_to_string('que_pdf_notification/que_pdf_notification.html', context)
+                
+                # Create the email payload for this specific user
+                to = [{"email": user_email, "name": getattr(user_obj, "username", "User")}]
+                send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+                    to=to,
+                    sender=sender,
+                    subject=subject,
+                    html_content=html_message
+                )
 
-                    subject = f"📝 New {heading} PDF Available!"
-                    email = EmailMessage(
-                        subject=subject,
-                        body=plain_message,
-                        from_email=settings.EMAIL_HOST_USER,
-                        to=[user_email],
-                        connection=connection,  # reuse connection [web:48]
-                    )
-                    email.content_subtype = "plain"
-                    email.attach_alternative(html_message, "text/html")
-                    email.send(fail_silently=False)
-                    print(f"[SUCCESS] Email sent to {getattr(user_obj, 'username', '')} ({user_email})")
+                # Send the email via Brevo API
+                api_instance.send_transac_email(send_smtp_email)
+                print(f"[SUCCESS] Brevo email sent to {getattr(user_obj, 'username', '')} ({user_email})")
 
-                except Exception as e:
-                    print(f"[ERROR] Failed to send email to {getattr(user_obj, 'username', '')} ({user_email}): {e}")
+            except ApiException as e:
+                # Log API-specific errors, but let the loop continue for other users
+                print(f"[ERROR] Brevo API Error for {user_email}: {e}")
+            except Exception as e:
+                print(f"[ERROR] Failed to send email to {user_email}: {e}")
 
     except Exception as e:
-        print(f"[ERROR] Unexpected error while processing email task: {e}")
+        print(f"[ERROR] Unexpected error in email task. Celery will retry. Error: {e}")
+        # Re-raise the exception to allow Celery to handle the retry
+        raise e
 
+# ==============================================================================
+# SIGNAL RECEIVER (NO CHANGES NEEDED HERE)
+# ==============================================================================
 @receiver(post_save, sender='home.QuePdf')
 def que_pdf_notification(sender, instance, created, **kwargs):
     """Trigger email notification when a new QuePdf instance is created."""
     if created:
         try:
             from home.serializers import QuePdfSerializer
-
             serializer = QuePdfSerializer(instance)
             instance_data = serializer.data
 
-            # Preserve link shape; avoid repeated getattr by local vars
             sem = str(getattr(instance, 'sem', ''))
             sub = str(getattr(instance, 'sub', ''))
             instance_data["pdf_link"] = (
@@ -111,7 +127,6 @@ def que_pdf_notification(sender, instance, created, **kwargs):
             print(f"[DEBUG] QuePdf Created - Data Sent to Celery: {json.dumps(instance_data, indent=4)}")
 
             if instance.id:
-                # Fire and forget: pass the dict payload
                 send_email_task.apply_async(args=[instance_data])
             else:
                 print("[ERROR] Instance ID is missing, not sending to Celery.")

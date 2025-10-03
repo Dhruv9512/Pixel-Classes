@@ -1,12 +1,12 @@
+# your_app/tasks.py
+
 from django.utils.timezone import now
 import random
 import logging
-from django.core.cache import cache
+from django.conf import settings # Import settings
 from django.template.loader import render_to_string
 from rest_framework.response import Response
-from django.conf.global_settings import EMAIL_HOST_USER
 from rest_framework import status
-from django.core.mail import send_mail, EmailMessage, get_connection
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
 from django.utils import timezone
@@ -16,34 +16,67 @@ from celery import shared_task
 from django.contrib.auth.models import User
 from hashlib import md5
 
+# Brevo API client imports
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+
 logger = logging.getLogger(__name__)
 
-# OTP Generation function
+# OTP Generation function (no changes)
 def generate_otp():
     """Generate a random 6-digit OTP."""
     otp = f"{random.randint(100000, 999999)}"
     logger.debug(f"Generated OTP: {otp}")
     return otp
 
-# Generate token
+# Generate token function (no changes)
 def generate_reset_token(user):
-    # Delete expired tokens first (single query) [optimization; same behavior]
     PasswordResetToken.objects.filter(expiry_date__lt=timezone.now()).delete()
-
-    # Remove any existing tokens for this user (logic preserved)
     PasswordResetToken.objects.filter(user=user).delete()
-
-    # Generate and store a new token
     token = default_token_generator.make_token(user)
     expiry_date = timezone.now() + timedelta(hours=1)
     PasswordResetToken.objects.create(user=user, token=token, expiry_date=expiry_date)
     return token
 
-# Celery email sending helpers: reuse a single SMTP connection where possible. [web:48]
-def _send_html_email(subject, html, to_email):
-    email = EmailMessage(subject, html, EMAIL_HOST_USER, [to_email])
-    email.content_subtype = "html"
-    email.send(fail_silently=False)
+# ==============================================================================
+# UPDATED EMAIL SENDING HELPER
+# ==============================================================================
+def _send_html_email(subject, html_content, to_email):
+    """
+    Sends an HTML email using the Brevo API.
+    This function replaces the original SMTP-based implementation.
+    """
+    # Configure the Brevo API client
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key['api-key'] = settings.BREVO_API_KEY
+
+    # Create an API instance
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+    
+    # Define the sender and receiver
+    sender = {"email": settings.BREVO_SENDER_EMAIL, "name": "PixelClasses"} # You can customize the sender name
+    to = [{"email": to_email}]
+
+    # Create the email object
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=to,
+        sender=sender,
+        subject=subject,
+        html_content=html_content
+    )
+
+    try:
+        # Send the email
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        logger.info(f"Email sent successfully via Brevo to {to_email}. Response: {api_response}")
+    except ApiException as e:
+        logger.error(f"Brevo API exception when sending email to {to_email}: {e}")
+        # Re-raise the exception to allow Celery to handle retries
+        raise e
+
+# ==============================================================================
+# CELERY TASKS (No changes needed here)
+# ==============================================================================
 
 # Send Registration OTP email
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True, retry_kwargs={'max_retries': 5})
@@ -60,7 +93,6 @@ def send_mail_for_register(self, user_data=None):
     if not otp:
         raise ValueError("OTP is missing in user_data")
 
-    # Fetch minimal user fields if needed
     user = User.objects.only('email', 'username').filter(username=username).first()
     if not user:
         logger.error(f"User with username {username} does not exist.")
@@ -116,7 +148,7 @@ def send_password_reset_email(self, user_data=None):
     _send_html_email(subject, message, email)
     logger.info(f"Sent password reset email to {email}")
 
-# Cache key helpers (stable, user-scoped)
+# Cache key helpers (no changes)
 def user_cache_key(request, key_prefix, cache_key):
     user_id = request.user.pk if getattr(request.user, "is_authenticated", False) else "anon"
     raw = f"user_cache:v1:{user_id}"
