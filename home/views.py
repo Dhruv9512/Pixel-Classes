@@ -163,7 +163,7 @@ class QuePdfAddView(APIView):
 
             # Upload PDF to blob storage (same logic) [web:27]
             try:
-                blob = put(f"QuePdf/{choose}/sem {sem}/{pdf.name}", pdf.read())
+                blob = put(f"QuePdf/{choose}/sem {sem}/{pdf.name}", pdf.read(),options={'allowOverwrite': True})
             except Exception as upload_error:
                 return Response({"error": f"Upload failed: {str(upload_error)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
