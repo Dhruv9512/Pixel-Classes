@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     # For PostgreSQL (psycopg)
     libpq-dev \
+    # For MySQL (mysqlclient) - THIS IS THE FIX
+    pkg-config \
+    default-libmysqlclient-dev \
     # A lightweight init system for containers
     tini \
     # Clean up apt cache to keep the image small
