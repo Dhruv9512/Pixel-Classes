@@ -22,3 +22,4 @@ daphne
 django-jet-reboot
 cachecontrol
 sib-api-v3-sdk
+pytz
