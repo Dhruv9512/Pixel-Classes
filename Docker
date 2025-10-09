@@ -7,16 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install system dependencies required for your project
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # For compiling Python packages from source if needed
     build-essential \
-    # For PostgreSQL (psycopg)
     libpq-dev \
-    # For MySQL (mysqlclient) - THIS IS THE FIX
     pkg-config \
     default-libmysqlclient-dev \
-    # A lightweight init system for containers
     tini \
-    # Clean up apt cache to keep the image small
     && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
@@ -31,12 +26,11 @@ COPY requirements.txt .
 # Install Python packages using uv (much faster than pip)
 RUN uv pip install --system --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code
+# Copy the rest of your application code (including the entrypoint.sh)
 COPY . .
 
-# Copy and make the entrypoint script executable
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# ✅ THIS IS THE FIX: Make the entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
 
 # Expose the port your application will run on
 EXPOSE 8000
