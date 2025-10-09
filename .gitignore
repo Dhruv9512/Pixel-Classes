@@ -1,2 +1,49 @@
-/myenv/
+# 🧠 Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 🧩 Virtual environment
+PixelEnv/
+venv/
+.env/
+env/
+.venv/
+
+# ⚙️ Environment files
 .env
+.env.*.local
+
+# 🧪 Jupyter Notebook
+.ipynb_checkpoints
+
+# 📦 Package / Dependency
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 🔧 IDE / Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 🧰 OS Files
+.DS_Store
+Thumbs.db
+
+# 🚀 Django / Flask Specific
+*.log
+db.sqlite3
+media/
+staticfiles/
+static/
+local_settings.py
+
+# 🪶 Caches
+.pytest_cache/
+__pypackages__/
+
+# 🧱 uv (if used)
+.uv/
