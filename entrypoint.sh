@@ -3,6 +3,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 
 # ✅ Wait for the database to become available
 echo "Waiting for database to be ready..."
+# Use the correct manage.py path if your project structure is different
 while ! python manage.py showmigrations &>/dev/null; do
     echo "Database not ready, waiting..."
     sleep 2
@@ -19,7 +20,7 @@ python manage.py collectstatic --noinput
 
 # ✅ Start Celery Worker in the background
 echo "Starting Celery worker..."
-celery -A MechanicSetu worker \
+celery -A Pixel worker \
   --loglevel=info \
   --pool=solo \
   --max-tasks-per-child=5 \
@@ -27,4 +28,4 @@ celery -A MechanicSetu worker \
 
 # ✅ Start Daphne (ASGI Server) in the foreground
 echo "Starting Daphne (ASGI - WebSocket + HTTP)..."
-exec daphne -b 0.0.0.0 -p 8000 MechanicSetu.asgi:application
+exec daphne -b 0.0.0.0 -p 8000 Pixel.asgi:application

@@ -3,19 +3,11 @@ djangorestframework
 django-cors-headers
 dj-database-url
 django-environ
-pandas
-numpy
-scipy
-scikit-learn
-matplotlib
-jupyterlab
 gunicorn
 djangorestframework-simplejwt
-django-redis
 mysqlclient
 python-decouple
 python-dotenv
-schedule
 whitenoise
 psycopg2-binary
 vercel-blob
@@ -27,7 +19,6 @@ google-auth-httplib2
 channels
 channels_redis
 daphne
-feedparser
 django-jet-reboot
 cachecontrol
 sib-api-v3-sdk
