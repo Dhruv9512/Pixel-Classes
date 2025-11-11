@@ -146,7 +146,8 @@ class GoogleLoginAPIView(APIView):
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
             email = idinfo.get('email')
-    
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -203,7 +204,8 @@ class GoogleSignupAPIView(APIView):
             )
 
             email = idinfo.get('email')
-
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -277,7 +279,8 @@ class LoginView(APIView):
             user = User.objects.only('id', 'username', 'email', 'is_active').filter(username=username).first()
             if not user:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
-            
+            if user.email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             user_auth = authenticate(username=username, password=password)
             if not user_auth:
                 return Response({"error": "Incorrect password. Please try again."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -333,7 +336,8 @@ class RegisterView(APIView):
                     {"allowOverwrite": True}
                 )
                 profile_pic = blob["url"]
-
+            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+                return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             # Validate uniqueness with exists() + only('id') to minimize IO. [web:27]
             if User.objects.filter(email=email).only('id').exists():
                 logger.warning(f"Registration failed: Email {email} already exists.")
