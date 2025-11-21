@@ -13,6 +13,10 @@ env/
 # ⚙️ Environment files
 .env
 .env.*.local
+# ⚙️ Environment files (Secrets)
+.env.local
+# Ignores common variants (e.g., .env.production, .env.local)
+.env.*
 
 # 🧪 Jupyter Notebook
 .ipynb_checkpoints
