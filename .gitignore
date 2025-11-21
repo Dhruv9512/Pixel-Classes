@@ -1,43 +1,57 @@
-# 🧠 Python
-__pycache__/
+🧠 Python
+
+pycache/
 *.py[cod]
 *$py.class
 
-# 🧩 Virtual environment
+🧩 Virtual environment
+
+Ignores common virtual environment folders, including the specific one you mentioned
+
 PixelEnv/
 venv/
 .env/
 env/
 .venv/
 
-# ⚙️ Environment files
-.env
-.env.*.local
-# ⚙️ Environment files (Secrets)
-.env.local
-# Ignores common variants (e.g., .env.production, .env.local)
-.env.*
+⚙️ Environment files (Secrets)
 
-# 🧪 Jupyter Notebook
+These lines ensure NO file containing secrets is committed
+
+.env
+.env.local
+.env.*
+.env.*.local
+
+🧪 Jupyter Notebook
+
 .ipynb_checkpoints
 
-# 📦 Package / Dependency
+📦 Package / Dependency
+
 *.egg-info/
 dist/
 build/
 *.egg
 
-# 🔧 IDE / Editor files
+🔧 IDE / Editor files
+
+Ignores local configuration files for popular editors/IDEs
+
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 
-# 🧰 OS Files
+🧰 OS Files
+
 .DS_Store
 Thumbs.db
 
-# 🚀 Django / Flask Specific
+🚀 Django / Flask Specific
+
+Ignores development database, logs, uploaded files, and sensitive settings
+
 *.log
 db.sqlite3
 media/
@@ -45,9 +59,11 @@ staticfiles/
 static/
 local_settings.py
 
-# 🪶 Caches
-.pytest_cache/
-__pypackages__/
+🪶 Caches
 
-# 🧱 uv (if used)
+.pytest_cache/
+pypackages/
+
+🧱 uv (if used)
+
 .uv/
