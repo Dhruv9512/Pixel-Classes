@@ -16,7 +16,7 @@ COOKIE_SECURE = not DEBUG
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="pixel-classes.onrender.com,127.0.0.1,localhost",
+    default="pixel-classes.onrender.com,127.0.0.1,localhost,localhost:8081,pixelclass.expo.app,pixelclass.netlify.app",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 
@@ -166,13 +166,13 @@ CELERY_BROKER_USE_SSL = {'ssl_cert_reqs': ssl.CERT_REQUIRED if not DEBUG else No
 # CORS/CSRF: use plain URLs (no markdown), list each allowed origin when credentials enabled. [web:178][web:184]
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="https://pixel-classes.onrender.com,https://pixelclass.netlify.app,http://172.20.10.4:5173,http://localhost:5173",
+    default="https://pixel-classes.onrender.com,https://pixelclass.netlify.app,https://pixelclass.expo.app/,http://172.20.10.4:5173,http://localhost:5173,http://localhost:8081",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="https://pixelclass.netlify.app,http://172.20.10.4:5173,http://localhost:5173,https://pixel-classes.onrender.com",
+    default="https://pixelclass.netlify.app,https://pixelclass.expo.app/,http://172.20.10.4:5173,http://localhost:5173,https://pixel-classes.onrender.com,http://localhost:8081",
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 
