@@ -20,6 +20,7 @@ ALLOWED_HOSTS = config(
     cast=lambda v: [s.strip() for s in v.split(",")]
 )
 
+
 # Database
 DATABASES = {
     'default': dj_database_url.config(
