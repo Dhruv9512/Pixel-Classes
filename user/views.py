@@ -31,14 +31,10 @@ from vercel_blob import put
 from django.views.decorators.cache import never_cache
 from .authentication import CookieJWTAuthentication
 from django.conf import settings
-
-# Optimizations
-# - Use minimal column selection with only()/values()/first() per Django guidance. [web:27]
-# - Cache Google cert fetch for verify_oauth2_token using cachecontrol-backed session. [web:7][web:26]
-# - Centralize cookie setting with SameSite=None + Secure + HttpOnly (per modern browser rules). [web:6]
-
 import requests as _req
 import cachecontrol
+from dotenv import load_dotenv
+load_dotenv()
 
 _cached_session = cachecontrol.CacheControl(_req.session())  # cache Google certs [web:7]
 _google_request = g_requests.Request(session=_cached_session)  # pass to id_token.verify_oauth2_token [web:26]
@@ -137,7 +133,7 @@ class GoogleLoginAPIView(APIView):
         token = request.data.get('token')
         if not token:
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
         try:
             # Use cached request to avoid repeated cert downloads. [web:7]
             idinfo = id_token.verify_oauth2_token(
@@ -145,6 +141,7 @@ class GoogleLoginAPIView(APIView):
                 _google_request,
                 os.environ.get('GOOGLE_CLIENT_ID')
             )
+            
             email = idinfo.get('email')
             if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
                 return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
@@ -185,28 +182,7 @@ class GoogleLoginAPIView(APIView):
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Google signup verification view
-import os
-from django.conf import settings
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.cache import never_cache
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-from django.contrib.auth import login
-from django.contrib.auth.models import User
-from rest_framework_simplejwt.tokens import RefreshToken
-import logging
-
-# Initialize logger
-logger = logging.getLogger(__name__)
-
-# Initialize the Google Request object (cached)
-_google_request = google_requests.Request()
+# Google Signup View
 
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
@@ -232,11 +208,14 @@ class GoogleSignupAPIView(APIView):
                 _google_request, 
                 audience=None 
             )
-
+            # DEBUGGING: Print what Google actually sent back
+            print("DEBUG - Token Info:", idinfo) 
+            print("DEBUG - Allowed Clients:", ALLOWED_CLIENT_IDS)
             # 2. Manually check if the token's audience matches one of your apps
             if idinfo['aud'] not in ALLOWED_CLIENT_IDS:
-                raise ValueError('Could not verify audience.')
-
+                if idinfo.get('azp') not in ALLOWED_CLIENT_IDS:
+                    raise ValueError(f"Audience mismatch! Token aud: {idinfo['aud']}, azp: {idinfo.get('azp')}")
+            
             # --- Existing Logic Starts Here ---
             email = idinfo.get('email')
             if email in ["forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"]:
