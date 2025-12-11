@@ -186,6 +186,28 @@ class GoogleLoginAPIView(APIView):
 
 
 # Google signup verification view
+import os
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from django.contrib.auth import login
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+
+# Initialize the Google Request object (cached)
+_google_request = google_requests.Request()
+
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class GoogleSignupAPIView(APIView):
@@ -196,20 +218,34 @@ class GoogleSignupAPIView(APIView):
         if not token:
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Define all valid Client IDs from your Expo config
+        ALLOWED_CLIENT_IDS = [
+            os.environ.get('GOOGLE_WEB_CLIENT_ID'),
+            os.environ.get('GOOGLE_IOS_CLIENT_ID'),
+            os.environ.get('GOOGLE_ANDROID_CLIENT_ID'),
+        ]
+
         try:
+            # 1. Verify the token signature, but skip the automatic audience check for now (audience=None)
             idinfo = id_token.verify_oauth2_token(
                 token,
-                _google_request,  # cached certs [web:7]
-                os.environ.get('GOOGLE_CLIENT_ID')
+                _google_request, 
+                audience=None 
             )
 
+            # 2. Manually check if the token's audience matches one of your apps
+            if idinfo['aud'] not in ALLOWED_CLIENT_IDS:
+                raise ValueError('Could not verify audience.')
+
+            # --- Existing Logic Starts Here ---
             email = idinfo.get('email')
-            if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
+            if email in ["forlaptop2626@gmail.com", "mitsuhamitsuha123@gmail.com"]:
                 return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
+            
             if not email:
                 return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Prevent duplicate email with exists() and only id. [web:27]
+            # Check if user exists
             if User.objects.filter(email=email).only('id').exists():
                 return Response({"error": "User already exists. Please log in."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -250,12 +286,13 @@ class GoogleSignupAPIView(APIView):
 
             return _set_auth_cookies(response, access_token, refresh)
 
-        except ValueError:
-            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            # Helpful for debugging: print the specific error if needed
+            logger.error(f"Token verification failed: {e}") 
+            return Response({"error": "Invalid token or audience mismatch"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.exception("Google signup failed.")
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 # Login View
 @method_decorator(never_cache, name='dispatch')
