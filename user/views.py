@@ -133,27 +133,39 @@ class GoogleLoginAPIView(APIView):
         token = request.data.get('token')
         if not token:
             return Response({'error': 'Token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Define all valid Client IDs (matches Signup View)
+        ALLOWED_CLIENT_IDS = [
+            os.environ.get('GOOGLE_WEB_CLIENT_ID'),
+            os.environ.get('GOOGLE_IOS_CLIENT_ID'),
+            os.environ.get('GOOGLE_ANDROID_CLIENT_ID'),
+        ]
         
         try:
-            # Use cached request to avoid repeated cert downloads. [web:7]
+            # 2. Verify the token signature, skipping automatic audience check
             idinfo = id_token.verify_oauth2_token(
                 token,
                 _google_request,
-                os.environ.get('GOOGLE_CLIENT_ID')
+                audience=None 
             )
+
+            # 3. Manually check Audience (aud) OR Authorized Party (azp)
+            if idinfo['aud'] not in ALLOWED_CLIENT_IDS:
+                if idinfo.get('azp') not in ALLOWED_CLIENT_IDS:
+                    raise ValueError(f"Audience mismatch! Token aud: {idinfo['aud']}, azp: {idinfo.get('azp')}")
             
             email = idinfo.get('email')
             if email in ["forlaptop2626@gmail.com","mitsuhamitsuha123@gmail.com"]:
                 return Response({"error": "User not eligible"}, status=status.HTTP_404_NOT_FOUND)
             if not email:
-                return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Invalid token: No email found"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Fetch minimal columns; avoid full model instantiation DB hit. [web:27]
+            # Fetch minimal columns; avoid full model instantiation DB hit.
             user_data = User.objects.only('id', 'username', 'email').filter(email=email).values('id', 'username', 'email').first()
             if not user_data:
                 return Response({"error": "User does not exist. Please sign up first."}, status=status.HTTP_404_NOT_FOUND)
 
-            # Rebuild user instance without extra query (id, username, email). [web:27]
+            # Rebuild user instance without extra query (id, username, email).
             user = User(id=user_data['id'], username=user_data['username'], email=user_data['email'])
 
             login(request, user)
@@ -170,20 +182,20 @@ class GoogleLoginAPIView(APIView):
 
             response = Response({
                 "message": "Login successful!",
-                "satus": "true",
+                "status": "true",
             }, status=status.HTTP_200_OK)
 
             return _set_auth_cookies(response, access_token, refresh)
 
-        except ValueError:
-            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as e:
+            logger.error(f"Login Token verification failed: {e}")
+            return Response({"error": "Invalid token or audience mismatch"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.exception("Google login failed.")
             return Response({"error": "Something went wrong. Try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Google Signup View
-
 @method_decorator(csrf_exempt, name='dispatch')
 @method_decorator(never_cache, name='dispatch')
 class GoogleSignupAPIView(APIView):
